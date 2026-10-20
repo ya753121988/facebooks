@@ -42,7 +42,7 @@ def save_data(data):
     else:
         fallback_data = data
 
-# ================= PWA SETUP (HIDES REAL MOBILE STATUS BAR) ================= #
+# ================= PWA SETUP (SHOWS REAL MOBILE STATUS BAR) ================= #
 
 @app.route('/manifest.json')
 def manifest():
@@ -50,8 +50,7 @@ def manifest():
         "name": "Auto Chat Video",
         "short_name": "ChatVideo",
         "start_url": "/",
-        "display": "fullscreen",
-        "orientation": "portrait",
+        "display": "standalone",
         "background_color": "#ffffff",
         "theme_color": "#ffffff",
         "icons": [
@@ -88,7 +87,7 @@ CHAT_HTML = """
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Messenger Clone</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#ffffff">
@@ -113,62 +112,17 @@ CHAT_HTML = """
             position: relative; 
             overflow: hidden;
         }
-
-        /* Virtual Mobile Status Bar */
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 18px 4px 18px;
-            background: #ffffff;
-            font-size: 13px;
-            font-weight: 600;
-            color: #000;
-            z-index: 20;
-            user-select: none;
-        }
-        .status-left {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            letter-spacing: 0.3px;
-        }
-        .status-right {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            font-size: 12px;
-        }
-        .battery-box {
-            display: inline-flex;
-            align-items: center;
-            border: 1.5px solid #000;
-            border-radius: 3px;
-            width: 22px;
-            height: 11px;
-            padding: 1px;
-            position: relative;
-            margin-left: 2px;
-        }
-        .battery-box::after {
-            content: '';
-            position: absolute;
-            right: -3.5px;
-            top: 2px;
-            width: 2px;
-            height: 5px;
-            background: #000;
-            border-radius: 0 1px 1px 0;
-        }
-        .battery-fill {
-            height: 100%;
-            width: 85%;
-            background: #000;
-            border-radius: 1px;
-        }
         
         /* Messenger Chat Header */
-        .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 15px 10px 15px; border-bottom: 1px solid #e0e0e0; z-index: 10; background: #fff;}
+        .header { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 10px 15px; 
+            border-bottom: 1px solid #e0e0e0; 
+            z-index: 10; 
+            background: #fff;
+        }
         .header-left { display: flex; align-items: center; gap: 12px; }
         .back-btn { color: #0084ff; font-size: 20px; cursor: pointer; }
         .pfp-container { position: relative; width: 40px; height: 40px; }
@@ -301,7 +255,6 @@ CHAT_HTML = """
         .overlay-start { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.92); display: flex; justify-content: center; align-items: center; z-index: 100; flex-direction: column; color: white;}
         .start-btn { background: #0084ff; color: white; padding: 14px 28px; font-size: 17px; border: none; border-radius: 25px; cursor: pointer; margin-top: 15px; font-weight: 600; box-shadow: 0 4px 10px rgba(0,132,255,0.4);}
         .seen-indicator { width: 14px; height: 14px; border-radius: 50%; object-fit: cover; align-self: flex-end; margin-top: 4px; display: none; }
-        .countdown-text { font-size: 55px; font-weight: bold; color: #0084ff; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -309,32 +262,15 @@ CHAT_HTML = """
 <div class="messenger-container" id="messenger">
     <!-- Start Recording Overlay -->
     <div class="overlay-start" id="overlay">
-        <h2 id="overlay-title" style="margin-bottom: 8px;">Ready to Start</h2>
-        <p id="overlay-desc" style="text-align:center; padding: 0 20px; font-size: 13px; color:#ccc; line-height: 1.5;">
-            নিচের বাটনে চাপ দিলে মোবাইলের আসল বার গায়েব হয়ে শুধুমাত্র চ্যাট চালু হবে।<br>
-            <span style="color:#4fc3f7;">(ভিডিও করতে ফোনের স্ক্রিন রেকর্ডার অন করে স্টার্ট করুন)</span>
+        <h2 style="margin-bottom: 8px;">Ready to Start</h2>
+        <p style="text-align:center; padding: 0 20px; font-size: 13px; color:#ccc; line-height: 1.5;">
+            স্টার্ট বাটনে চাপ দিলে স্ক্রিন ৩ সেকেন্ড স্থির থাকবে,<br>
+            যাতে আপনি সহজে ভিডিও রেকর্ড ও কাট করতে পারেন।
         </p>
-        <button class="start-btn" id="start-btn" onclick="startAutoChat()">Start Chat</button>
-        <div class="countdown-text" id="countdown">3</div>
+        <button class="start-btn" onclick="startAutoChat()">Start Chat</button>
     </div>
 
-    <!-- The ONLY Visible Status Bar (Virtual Mobile Status Bar) -->
-    <div class="status-bar" id="statusBar">
-        <div class="status-left">
-            <span id="live-clock">12:00</span>
-        </div>
-        <div class="status-right">
-            <i class="fa-solid fa-signal" style="font-size: 11px;"></i>
-            <span style="font-size: 10px; font-weight: 700;">5G</span>
-            <i class="fa-solid fa-wifi" style="font-size: 12px;"></i>
-            <div class="battery-box">
-                <div class="battery-fill"></div>
-            </div>
-            <span style="font-size: 11px; margin-left: 1px;">85%</span>
-        </div>
-    </div>
-
-    <!-- Messenger Header -->
+    <!-- Messenger Header (Mobile's Real Status Bar will show on top naturally) -->
     <div class="header">
         <div class="header-left">
             <i class="fa-solid fa-arrow-left back-btn"></i>
@@ -379,7 +315,7 @@ CHAT_HTML = """
         <i class="fa-solid fa-thumbs-up input-right-icon" id="send-icon"></i>
     </div>
 
-    <!-- Gboard Keyboard -->
+    <!-- Gboard Keyboard (Real Dark Layout matching Screenshot) -->
     <div class="keyboard-area" id="keyboard">
         <div class="gboard-toolbar">
             <div class="tool-icons">
@@ -399,19 +335,6 @@ CHAT_HTML = """
 </div>
 
 <script>
-    // Live Phone Clock Update
-    function updateLiveClock() {
-        const now = new Date();
-        let hours = now.getHours();
-        let minutes = now.getMinutes();
-        hours = hours % 12 || 12;
-        minutes = minutes < 10 ? '0' + minutes : minutes;
-        const clockElem = document.getElementById('live-clock');
-        if (clockElem) clockElem.innerText = `${hours}:${minutes}`;
-    }
-    updateLiveClock();
-    setInterval(updateLiveClock, 1000);
-
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
     }
@@ -487,7 +410,7 @@ CHAT_HTML = """
                     {c: 'غ', h: '٦'}, {c: 'ع', h: '٧'}, {c: 'ه', h: '٨'}, {c: 'خ', h: '٩'}, {c: 'ح', h: '٠'}, {c: 'ج'}, {c: 'د'}
                 ],
                 [
-                    {c: 'ش'}, {c: 'س'}, {c: 'ي'}, {c: 'ব'}, {c: 'ل'}, {c: 'ا'}, {c: 'ت'}, {c: 'ن'}, {c: 'م'}, {c: 'ك'}, {c: 'ط'}
+                    {c: 'ش'}, {c: 'س'}, {c: 'ي'}, {c: 'ব'}, {c: 'ل'}, {c: 'ا'}, {c: 'ت'}, {c: 'ن'}, {c: 'ম'}, {c: 'ك'}, {c: 'ط'}
                 ],
                 [
                     {type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'},
@@ -632,37 +555,15 @@ CHAT_HTML = """
         scrollToBottom();
     }
 
-    // MAIN AUTO START WITH IMMERSIVE FULLSCREEN AND 3S COUNTDOWN
+    // MAIN AUTO START: 3 SECONDS CLEAN PAUSE BEFORE CHAT STARTS
     async function startAutoChat() {
-        // ১. মোবাইলের আসল বার হাইড করার জন্য সিস্টেম ফুলস্ক্রিন অ্যাক্টিভ করা
-        try {
-            if (document.documentElement.requestFullscreen) {
-                await document.documentElement.requestFullscreen();
-            } else if (document.documentElement.webkitRequestFullscreen) {
-                await document.documentElement.webkitRequestFullscreen();
-            }
-        } catch(e) {
-            console.log("Fullscreen request skipped.");
-        }
-
-        // ২. ৩ সেকেন্ড কাউন্টডাউন দেখানো (যাতে ব্রাউজারের নোটিশ বারটি নিজে থেকে নেমে গায়েব হয়ে যায়)
-        document.getElementById('start-btn').style.display = 'none';
-        document.getElementById('overlay-desc').style.display = 'none';
-        document.getElementById('overlay-title').innerText = 'Starting...';
-        const cd = document.getElementById('countdown');
-        cd.style.display = 'block';
-
-        cd.innerText = '3';
-        await sleep(1000);
-        cd.innerText = '2';
-        await sleep(1000);
-        cd.innerText = '1';
-        await sleep(1000);
-
-        // ৩. ওভারলে বন্ধ করে চ্যাট শুরু করা (এখন স্ক্রিন ১০০% ক্লিন থাকবে)
+        // ১. ওভারলে সাথে সাথে হাইড হয়ে যাবে
         document.getElementById('overlay').style.display = 'none';
-        await sleep(300);
 
+        // ২. ইউজারদের ভিডিও কাটার সুবিধার জন্য ৩ সেকেন্ড স্ক্রিন একদম স্থির থাকবে
+        await sleep(3000);
+
+        // ৩. ৩ সেকেন্ড পর মেসেজ ও কিবোর্ড টাইপিং শুরু হবে
         for (let msg of chatData.messages) {
             if (msg.sender === "1") {
                 await simulateTypingKeyboard(msg.text); 
