@@ -42,30 +42,41 @@ def save_data(data):
     else:
         fallback_data = data
 
-# ================= PWA SETUP (App Installer) ================= #
+# ================= PWA SETUP (App Installer - 100% Working) ================= #
 
 @app.route('/manifest.json')
 def manifest():
     manifest_data = {
-        "name": "Messenger Video",
-        "short_name": "Messenger",
+        "name": "Auto Chat Video",
+        "short_name": "ChatVideo",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#ffffff",
         "theme_color": "#0084ff",
-        "icons": [{
-            "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Facebook_Messenger_logo_2020.svg/512px-Facebook_Messenger_logo_2020.svg.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        }]
+        "icons": [
+            {
+                "src": "https://cdn-icons-png.flaticon.com/512/733/733548.png",
+                "sizes": "192x192",
+                "type": "image/png"
+            },
+            {
+                "src": "https://cdn-icons-png.flaticon.com/512/733/733548.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }
+        ]
     }
     return Response(json.dumps(manifest_data), mimetype='application/json')
 
 @app.route('/sw.js')
 def service_worker():
     sw_code = """
-    self.addEventListener('install', (e) => { console.log('App Installed'); });
-    self.addEventListener('fetch', (e) => {});
+    self.addEventListener('install', function(event) {
+        self.skipWaiting();
+    });
+    self.addEventListener('fetch', function(event) {
+        event.respondWith(fetch(event.request).catch(() => new Response("Offline")));
+    });
     """
     return Response(sw_code, mimetype='application/javascript')
 
@@ -78,9 +89,8 @@ CHAT_HTML = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Messenger Clone</title>
-    <!-- PWA Links -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0084ff">
+    <meta name="theme-color" content="#ffffff">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { margin: 0; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; background-color: #000; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
@@ -131,6 +141,7 @@ CHAT_HTML = """
         .kb-key.pressed { background: #aeb3ba; transform: scale(0.95); }
         .kb-lang-hint { position: absolute; top: 5px; right: 10px; font-size: 10px; color: #555; font-weight: bold;}
 
+        /* Overlays */
         .overlay-start { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 100; flex-direction: column; color: white;}
         .start-btn { background: #0084ff; color: white; padding: 15px 30px; font-size: 18px; border: none; border-radius: 10px; cursor: pointer; margin-top: 20px; font-weight: bold;}
         .seen-indicator { width: 14px; height: 14px; border-radius: 50%; object-fit: cover; align-self: flex-end; margin-top: 4px; display: none; }
@@ -141,9 +152,9 @@ CHAT_HTML = """
 <div class="messenger-container" id="messenger">
     <!-- Start Recording Overlay -->
     <div class="overlay-start" id="overlay">
-        <h2>Start Video Chat</h2>
-        <p style="text-align:center; padding: 0 20px; font-size: 14px; color:#ddd;">Allow Screen Recording when prompted.<br>Video automatically saves 4s after chat ends.</p>
-        <button class="start-btn" onclick="startAutoChat()">Start & Record</button>
+        <h2>Ready to Record</h2>
+        <p style="text-align:center; padding: 0 20px; font-size: 14px; color:#ddd;">Click Start. Allow Screen Record when prompted.<br>It will Auto-Fullscreen to skip video editing!</p>
+        <button class="start-btn" onclick="startAutoChat()">Start & Allow Record</button>
     </div>
 
     <!-- Header -->
@@ -201,7 +212,6 @@ CHAT_HTML = """
 </div>
 
 <script>
-    // PWA Service Worker Registration
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
     }
@@ -216,28 +226,6 @@ CHAT_HTML = """
     });
 
     function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-
-    // Screen Recording setup
-    async function startScreenRecord() {
-        try {
-            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-            const chunks = [];
-            mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = 'messenger_auto_video.webm'; 
-                a.click();
-            };
-            mediaRecorder.start();
-            return mediaRecorder;
-        } catch (err) {
-            alert("If browser blocks auto-recording, please start your built-in mobile screen recorder then click Start.");
-            return null;
-        }
-    }
 
     // Keyboard Logic
     const layouts = {
@@ -268,7 +256,7 @@ CHAT_HTML = """
 
     async function simulateTypingKeyboard(text) {
         const kb = document.getElementById('keyboard');
-        kb.classList.add('active'); // Show keyboard
+        kb.classList.add('active'); 
         setKeyboardLayout(text);
         await sleep(500);
 
@@ -284,12 +272,12 @@ CHAT_HTML = """
                 randomKey.classList.add('pressed');
                 setTimeout(() => randomKey.classList.remove('pressed'), 100);
             }
-            await sleep(150); // Typing speed
+            await sleep(150); 
         }
         await sleep(400); 
         input.value = "";
         icon.classList.remove('fa-paper-plane'); icon.classList.add('fa-thumbs-up');
-        kb.classList.remove('active'); // Hide keyboard
+        kb.classList.remove('active'); 
         await sleep(300);
     }
 
@@ -309,10 +297,44 @@ CHAT_HTML = """
         scrollToBottom();
     }
 
+    // MAIN AUTO RECORD FUNCTION WITH FULLSCREEN
     async function startAutoChat() {
-        const recorder = await startScreenRecord();
+        let mediaRecorder = null;
+        let stream = null;
+
+        try {
+            // ১. অটোমেটিক ফুল-স্ক্রিন করা (যাতে ভিডিও এডিট না করতে হয়)
+            if (document.documentElement.requestFullscreen) {
+                await document.documentElement.requestFullscreen();
+            }
+
+            // ২. স্ক্রিন রেকর্ডিং এর পারমিশন চাওয়া
+            stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { displaySurface: "browser" }, 
+                audio: false
+            });
+
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            const chunks = [];
+            mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; 
+                a.download = 'messenger_perfect_video.webm'; 
+                a.click();
+            };
+            mediaRecorder.start();
+
+        } catch (err) {
+            alert("Error: Please click 'Allow' to record the screen. If it fails, install the App first from browser menu.");
+            if(document.exitFullscreen) document.exitFullscreen();
+            return; // স্টপ করে দিবে যদি পারমিশন না দেয়
+        }
+
+        // ৩. পারমিশন দিলে তবেই চ্যাট শুরু হবে
         document.getElementById('overlay').style.display = 'none';
-        
         await sleep(1000);
 
         for (let msg of chatData.messages) {
@@ -333,10 +355,17 @@ CHAT_HTML = """
         document.getElementById('seen-pfp').style.display = 'block';
         scrollToBottom();
 
-        // ঠিক ৪ সেকেন্ড পর অটোমেটিক ভিডিও সেভ হবে
+        // ৪. চার সেকেন্ড পর ভিডিও অটো সেভ হবে
         await sleep(4000); 
-        if (recorder && recorder.state === "recording") {
-            recorder.stop();
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            // স্ক্রিন শেয়ারিং আইকন অফ করা
+            stream.getTracks().forEach(track => track.stop());
+        }
+
+        // ফুল-স্ক্রিন থেকে বের হওয়া
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
         }
     }
 </script>
