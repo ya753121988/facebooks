@@ -153,8 +153,11 @@ CHAT_HTML = """
     <!-- Start Recording Overlay -->
     <div class="overlay-start" id="overlay">
         <h2>Ready to Record</h2>
-        <p style="text-align:center; padding: 0 20px; font-size: 14px; color:#ddd;">Click Start. Allow Screen Record when prompted.<br>It will Auto-Fullscreen to skip video editing!</p>
-        <button class="start-btn" onclick="startAutoChat()">Start & Allow Record</button>
+        <p style="text-align:center; padding: 0 20px; font-size: 14px; color:#ddd; line-height: 1.5;">
+            Click Start to play chat in Fullscreen!<br>
+            <span style="font-size:12px; color:#aaa;">(মোবাইলে ভিডিও করতে ফোনের বিল্ট-ইন Screen Recorder অন করে Start চাপুন)</span>
+        </p>
+        <button class="start-btn" onclick="startAutoChat()">Start Chat</button>
     </div>
 
     <!-- Header -->
@@ -231,7 +234,7 @@ CHAT_HTML = """
     const layouts = {
         'EN': ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'],
         'BN': ['কখগঘঙচছজঝঞ', 'টঠডঢণতথদধন', 'পফবভমযরলশষ'],
-        'HI': ['कखगघङचछजझञ', 'टठडढणतथदधन', 'पफबभमयरलवश'],
+        'HI': ['कखगघङचछजझञ', 'टठডढणतथदधन', 'पफबभमयरलवश'],
         'EM': ['😀😂🥰😎🤔', '😭🙏👍🔥💯', '❤️💔🎉🌟✅']
     };
 
@@ -297,43 +300,58 @@ CHAT_HTML = """
         scrollToBottom();
     }
 
-    // MAIN AUTO RECORD FUNCTION WITH FULLSCREEN
+    // MAIN AUTO RECORD FUNCTION WITH FULLSCREEN (ERROR-FREE & MOBILE/PC COMPATIBLE)
     async function startAutoChat() {
         let mediaRecorder = null;
         let stream = null;
 
+        // ১. অটোমেটিক ফুল-স্ক্রিন করা
         try {
-            // ১. অটোমেটিক ফুল-স্ক্রিন করা (যাতে ভিডিও এডিট না করতে হয়)
             if (document.documentElement.requestFullscreen) {
                 await document.documentElement.requestFullscreen();
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                await document.documentElement.webkitRequestFullscreen();
+            } else if (document.documentElement.msRequestFullscreen) {
+                await document.documentElement.msRequestFullscreen();
             }
-
-            // ২. স্ক্রিন রেকর্ডিং এর পারমিশন চাওয়া
-            stream = await navigator.mediaDevices.getDisplayMedia({
-                video: { displaySurface: "browser" }, 
-                audio: false
-            });
-
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-            const chunks = [];
-            mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; 
-                a.download = 'messenger_perfect_video.webm'; 
-                a.click();
-            };
-            mediaRecorder.start();
-
-        } catch (err) {
-            alert("Error: Please click 'Allow' to record the screen. If it fails, install the App first from browser menu.");
-            if(document.exitFullscreen) document.exitFullscreen();
-            return; // স্টপ করে দিবে যদি পারমিশন না দেয়
+        } catch (e) {
+            console.log("Fullscreen request was prevented or not supported.");
         }
 
-        // ৩. পারমিশন দিলে তবেই চ্যাট শুরু হবে
+        // ২. ব্রাউজার স্ক্রিন রেকর্ডিং ট্রাই করা (শুধুমাত্র পিসিতে কাজ করবে, মোবাইলে ক্র্যাশ করবে না)
+        if (navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') {
+            try {
+                stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { displaySurface: "browser" }, 
+                    audio: false
+                });
+
+                if (window.MediaRecorder) {
+                    let options = { mimeType: 'video/webm' };
+                    if (!MediaRecorder.isTypeSupported('video/webm')) {
+                        options = MediaRecorder.isTypeSupported('video/mp4') ? { mimeType: 'video/mp4' } : {};
+                    }
+                    mediaRecorder = new MediaRecorder(stream, options);
+                    const chunks = [];
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data && e.data.size > 0) chunks.push(e.data);
+                    };
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; 
+                        a.download = 'messenger_chat_video.webm'; 
+                        a.click();
+                    };
+                    mediaRecorder.start();
+                }
+            } catch (err) {
+                console.log("Screen recording not started or permission cancelled on this device.");
+            }
+        }
+
+        // ৩. ওভারলে বন্ধ করে চ্যাট অ্যানিমেশন শুরু করা
         document.getElementById('overlay').style.display = 'none';
         await sleep(1000);
 
@@ -355,18 +373,22 @@ CHAT_HTML = """
         document.getElementById('seen-pfp').style.display = 'block';
         scrollToBottom();
 
-        // ৪. চার সেকেন্ড পর ভিডিও অটো সেভ হবে
+        // ৪. চার সেকেন্ড পর ভিডিও অটো সেভ এবং ফুলস্ক্রিন এক্সিট
         await sleep(4000); 
         if (mediaRecorder && mediaRecorder.state === "recording") {
             mediaRecorder.stop();
-            // স্ক্রিন শেয়ারিং আইকন অফ করা
+        }
+        if (stream) {
             stream.getTracks().forEach(track => track.stop());
         }
 
-        // ফুল-স্ক্রিন থেকে বের হওয়া
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        }
+        try {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        } catch(e) {}
     }
 </script>
 </body>
