@@ -42,7 +42,7 @@ def save_data(data):
     else:
         fallback_data = data
 
-# ================= PWA SETUP ================= #
+# ================= PWA SETUP (HIDES REAL MOBILE STATUS BAR) ================= #
 
 @app.route('/manifest.json')
 def manifest():
@@ -50,7 +50,8 @@ def manifest():
         "name": "Auto Chat Video",
         "short_name": "ChatVideo",
         "start_url": "/",
-        "display": "standalone",
+        "display": "fullscreen",
+        "orientation": "portrait",
         "background_color": "#ffffff",
         "theme_color": "#ffffff",
         "icons": [
@@ -113,7 +114,7 @@ CHAT_HTML = """
             overflow: hidden;
         }
 
-        /* Mobile Header Status Bar (Battery, Clock, Network) */
+        /* Virtual Mobile Status Bar */
         .status-bar {
             display: flex;
             justify-content: space-between;
@@ -203,7 +204,7 @@ CHAT_HTML = """
         .input-box { flex: 1; background: #f0f2f5; border-radius: 20px; padding: 8px 14px; font-size: 15px; border: none; outline: none; }
         .input-right-icon { color: #0084ff; font-size: 20px; margin-left: 10px; transition: 0.2s;}
 
-        /* ================= REAL GBOARD DARK THEME KEYBOARD ================= */
+        /* Gboard Keyboard */
         .keyboard-area { 
             height: 0; 
             background: #18191c; 
@@ -222,7 +223,6 @@ CHAT_HTML = """
             height: 295px; 
         }
 
-        /* Gboard Top Action Bar */
         .gboard-toolbar {
             display: flex;
             align-items: center;
@@ -238,7 +238,6 @@ CHAT_HTML = """
             gap: 18px;
         }
 
-        /* Gboard Key Rows */
         .kb-row { 
             display: flex; 
             gap: 5px; 
@@ -299,9 +298,10 @@ CHAT_HTML = """
         }
 
         /* Overlays */
-        .overlay-start { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 100; flex-direction: column; color: white;}
+        .overlay-start { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.92); display: flex; justify-content: center; align-items: center; z-index: 100; flex-direction: column; color: white;}
         .start-btn { background: #0084ff; color: white; padding: 14px 28px; font-size: 17px; border: none; border-radius: 25px; cursor: pointer; margin-top: 15px; font-weight: 600; box-shadow: 0 4px 10px rgba(0,132,255,0.4);}
         .seen-indicator { width: 14px; height: 14px; border-radius: 50%; object-fit: cover; align-self: flex-end; margin-top: 4px; display: none; }
+        .countdown-text { font-size: 55px; font-weight: bold; color: #0084ff; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -309,15 +309,16 @@ CHAT_HTML = """
 <div class="messenger-container" id="messenger">
     <!-- Start Recording Overlay -->
     <div class="overlay-start" id="overlay">
-        <h2 style="margin-bottom: 8px;">Ready to Start</h2>
-        <p style="text-align:center; padding: 0 20px; font-size: 13px; color:#ccc; line-height: 1.5;">
-            নিচের বাটনে চাপ দিলে নিখুঁত মোবাইল চ্যাট শুরু হবে।<br>
-            <span style="color:#4fc3f7;">(মোবাইলে ভিডিও করতে ফোনের স্ক্রিন রেকর্ডার অন করে স্টার্ট করুন)</span>
+        <h2 id="overlay-title" style="margin-bottom: 8px;">Ready to Start</h2>
+        <p id="overlay-desc" style="text-align:center; padding: 0 20px; font-size: 13px; color:#ccc; line-height: 1.5;">
+            নিচের বাটনে চাপ দিলে মোবাইলের আসল বার গায়েব হয়ে শুধুমাত্র চ্যাট চালু হবে।<br>
+            <span style="color:#4fc3f7;">(ভিডিও করতে ফোনের স্ক্রিন রেকর্ডার অন করে স্টার্ট করুন)</span>
         </p>
-        <button class="start-btn" onclick="startAutoChat()">Start Chat</button>
+        <button class="start-btn" id="start-btn" onclick="startAutoChat()">Start Chat</button>
+        <div class="countdown-text" id="countdown">3</div>
     </div>
 
-    <!-- Real Mobile Status Bar (Clock, Wi-Fi, 5G, Battery) -->
+    <!-- The ONLY Visible Status Bar (Virtual Mobile Status Bar) -->
     <div class="status-bar" id="statusBar">
         <div class="status-left">
             <span id="live-clock">12:00</span>
@@ -378,9 +379,8 @@ CHAT_HTML = """
         <i class="fa-solid fa-thumbs-up input-right-icon" id="send-icon"></i>
     </div>
 
-    <!-- REAL GBOARD MOBILE KEYBOARD (EXACT DARK THEME AS SCREENSHOT) -->
+    <!-- Gboard Keyboard -->
     <div class="keyboard-area" id="keyboard">
-        <!-- Top Toolbar -->
         <div class="gboard-toolbar">
             <div class="tool-icons">
                 <i class="fa-solid fa-chevron-right"></i>
@@ -391,7 +391,6 @@ CHAT_HTML = """
             </div>
             <i class="fa-solid fa-microphone"></i>
         </div>
-        <!-- 4 Rows of Keys -->
         <div class="kb-row" id="kb-r1"></div>
         <div class="kb-row" id="kb-r2"></div>
         <div class="kb-row" id="kb-r3"></div>
@@ -428,7 +427,7 @@ CHAT_HTML = """
 
     function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-    // REAL GBOARD LAYOUTS FOR BENGALI (PROBHAT/AVRO), ENGLISH, ARABIC & 194 COUNTRIES
+    // REAL GBOARD LAYOUTS
     const gboardLayouts = {
         'BN': {
             langLabel: '◀ প্রভাত ▶',
@@ -488,7 +487,7 @@ CHAT_HTML = """
                     {c: 'غ', h: '٦'}, {c: 'ع', h: '٧'}, {c: 'ه', h: '٨'}, {c: 'خ', h: '٩'}, {c: 'ح', h: '٠'}, {c: 'ج'}, {c: 'د'}
                 ],
                 [
-                    {c: 'ش'}, {c: 'س'}, {c: 'ي'}, {c: 'ب'}, {c: 'ل'}, {c: 'ا'}, {c: 'ت'}, {c: 'ن'}, {c: 'م'}, {c: 'ك'}, {c: 'ط'}
+                    {c: 'ش'}, {c: 'س'}, {c: 'ي'}, {c: 'ব'}, {c: 'ل'}, {c: 'ا'}, {c: 'ت'}, {c: 'ن'}, {c: 'م'}, {c: 'ك'}, {c: 'ط'}
                 ],
                 [
                     {type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'},
@@ -520,7 +519,6 @@ CHAT_HTML = """
         const lang = detectScript(text);
         let layout = gboardLayouts[lang];
 
-        // Universal Gboard Layout Generator for 194 Countries
         if (!layout) {
             const unique = Array.from(new Set(text.replace(/\\s/g, '')));
             const r1 = [], r2 = [], r3 = [];
@@ -587,13 +585,11 @@ CHAT_HTML = """
         icon.classList.remove('fa-thumbs-up'); 
         icon.classList.add('fa-paper-plane');
         
-        // Exact letter-by-letter typing with full Gboard key-press animation
         const chars = Array.from(text);
         for (let i = 0; i < chars.length; i++) {
             const ch = chars[i];
             input.value += ch;
 
-            // Highlight the exact key on Gboard
             let targetKey = document.querySelector(`.kb-key[data-char="${ch}"]`);
             if (!targetKey && ch === ' ') {
                 targetKey = document.querySelector('.kb-key.space-key');
@@ -636,10 +632,36 @@ CHAT_HTML = """
         scrollToBottom();
     }
 
-    // MAIN AUTO START FUNCTION
+    // MAIN AUTO START WITH IMMERSIVE FULLSCREEN AND 3S COUNTDOWN
     async function startAutoChat() {
+        // ১. মোবাইলের আসল বার হাইড করার জন্য সিস্টেম ফুলস্ক্রিন অ্যাক্টিভ করা
+        try {
+            if (document.documentElement.requestFullscreen) {
+                await document.documentElement.requestFullscreen();
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                await document.documentElement.webkitRequestFullscreen();
+            }
+        } catch(e) {
+            console.log("Fullscreen request skipped.");
+        }
+
+        // ২. ৩ সেকেন্ড কাউন্টডাউন দেখানো (যাতে ব্রাউজারের নোটিশ বারটি নিজে থেকে নেমে গায়েব হয়ে যায়)
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('overlay-desc').style.display = 'none';
+        document.getElementById('overlay-title').innerText = 'Starting...';
+        const cd = document.getElementById('countdown');
+        cd.style.display = 'block';
+
+        cd.innerText = '3';
+        await sleep(1000);
+        cd.innerText = '2';
+        await sleep(1000);
+        cd.innerText = '1';
+        await sleep(1000);
+
+        // ৩. ওভারলে বন্ধ করে চ্যাট শুরু করা (এখন স্ক্রিন ১০০% ক্লিন থাকবে)
         document.getElementById('overlay').style.display = 'none';
-        await sleep(500);
+        await sleep(300);
 
         for (let msg of chatData.messages) {
             if (msg.sender === "1") {
