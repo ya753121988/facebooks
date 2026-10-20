@@ -52,7 +52,7 @@ def manifest():
         "start_url": "/",
         "display": "standalone",
         "background_color": "#ffffff",
-        "theme_color": "#0084ff",
+        "theme_color": "#ffffff",
         "icons": [
             {
                 "src": "https://cdn-icons-png.flaticon.com/512/733/733548.png",
@@ -91,12 +91,10 @@ CHAT_HTML = """
     <title>Messenger Clone</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#ffffff">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            margin: 0; 
-            padding: 0; 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
             background-color: #000; 
             display: flex; 
@@ -114,9 +112,62 @@ CHAT_HTML = """
             position: relative; 
             overflow: hidden;
         }
+
+        /* Mobile Header Status Bar (Battery, Clock, Network) */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 18px 4px 18px;
+            background: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            color: #000;
+            z-index: 20;
+            user-select: none;
+        }
+        .status-left {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            letter-spacing: 0.3px;
+        }
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+        }
+        .battery-box {
+            display: inline-flex;
+            align-items: center;
+            border: 1.5px solid #000;
+            border-radius: 3px;
+            width: 22px;
+            height: 11px;
+            padding: 1px;
+            position: relative;
+            margin-left: 2px;
+        }
+        .battery-box::after {
+            content: '';
+            position: absolute;
+            right: -3.5px;
+            top: 2px;
+            width: 2px;
+            height: 5px;
+            background: #000;
+            border-radius: 0 1px 1px 0;
+        }
+        .battery-fill {
+            height: 100%;
+            width: 85%;
+            background: #000;
+            border-radius: 1px;
+        }
         
-        /* Header & Active Dot */
-        .header { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; z-index: 10; background: #fff;}
+        /* Messenger Chat Header */
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 15px 10px 15px; border-bottom: 1px solid #e0e0e0; z-index: 10; background: #fff;}
         .header-left { display: flex; align-items: center; gap: 12px; }
         .back-btn { color: #0084ff; font-size: 20px; cursor: pointer; }
         .pfp-container { position: relative; width: 40px; height: 40px; }
@@ -152,27 +203,100 @@ CHAT_HTML = """
         .input-box { flex: 1; background: #f0f2f5; border-radius: 20px; padding: 8px 14px; font-size: 15px; border: none; outline: none; }
         .input-right-icon { color: #0084ff; font-size: 20px; margin-left: 10px; transition: 0.2s;}
 
-        /* Universal Animated Keyboard */
-        .keyboard-area { height: 0; background: #cfd3d9; transition: height 0.25s ease-out; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; padding: 0 4px;}
-        .keyboard-area.active { height: 260px; padding-top: 10px; padding-bottom: 10px;}
-        .kb-row { display: flex; gap: 4px; margin-bottom: 5px; justify-content: center; width: 100%;}
-        .kb-key { 
-            background: #ffffff; 
-            border-radius: 5px; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.25); 
-            flex: 1; 
-            text-align: center; 
-            font-size: 16px; 
-            height: 42px;
+        /* ================= REAL GBOARD DARK THEME KEYBOARD ================= */
+        .keyboard-area { 
+            height: 0; 
+            background: #18191c; 
+            transition: height 0.25s cubic-bezier(0, 0, 0.2, 1); 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-end; 
+            position: relative; 
+            padding: 0 3px 6px 3px;
+            user-select: none;
+            -webkit-user-select: none;
+            border-top: 1px solid #23252a;
+        }
+        .keyboard-area.active { 
+            height: 295px; 
+        }
+
+        /* Gboard Top Action Bar */
+        .gboard-toolbar {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: #000;
-            user-select: none;
-            transition: background 0.08s, transform 0.08s;
+            justify-content: space-between;
+            padding: 6px 14px 6px 14px;
+            color: #9aa0a6;
+            font-size: 15px;
+            background: #18191c;
         }
-        .kb-key.pressed { background: #9da3ad; color: #fff; transform: scale(0.92); }
-        .kb-lang-hint { position: absolute; top: 4px; right: 12px; font-size: 11px; color: #333; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;}
+        .gboard-toolbar .tool-icons {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        /* Gboard Key Rows */
+        .kb-row { 
+            display: flex; 
+            gap: 5px; 
+            margin-bottom: 6px; 
+            justify-content: center; 
+            width: 100%;
+            padding: 0 2px;
+        }
+        .kb-key { 
+            background: #2c2e33; 
+            color: #ffffff;
+            border-radius: 6px; 
+            height: 44px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            font-weight: 400;
+            position: relative;
+            box-shadow: 0 1.5px 2px rgba(0,0,0,0.35);
+            transition: background 0.08s ease, transform 0.08s ease;
+        }
+        .kb-key .hint {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 9px;
+            color: #8c9096;
+            font-weight: 500;
+        }
+        .kb-key.special {
+            background: #202225;
+            flex: 1.4;
+            color: #d1d5db;
+            font-size: 14px;
+        }
+        .kb-key.space-key {
+            flex: 4.8;
+            font-size: 13px;
+            color: #9aa0a6;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .kb-key.enter-key {
+            background: #202225;
+            flex: 1.4;
+            color: #ffffff;
+        }
+        .kb-key.pressed { 
+            background: #4e535c !important; 
+            color: #fff !important;
+            transform: scale(0.92); 
+        }
 
         /* Overlays */
         .overlay-start { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 100; flex-direction: column; color: white;}
@@ -187,13 +311,29 @@ CHAT_HTML = """
     <div class="overlay-start" id="overlay">
         <h2 style="margin-bottom: 8px;">Ready to Start</h2>
         <p style="text-align:center; padding: 0 20px; font-size: 13px; color:#ccc; line-height: 1.5;">
-            নিচের বাটনে চাপ দিলে নিখুঁত ফুল-স্ক্রিনে অটো চ্যাট শুরু হবে।<br>
+            নিচের বাটনে চাপ দিলে নিখুঁত মোবাইল চ্যাট শুরু হবে।<br>
             <span style="color:#4fc3f7;">(মোবাইলে ভিডিও করতে ফোনের স্ক্রিন রেকর্ডার অন করে স্টার্ট করুন)</span>
         </p>
         <button class="start-btn" onclick="startAutoChat()">Start Chat</button>
     </div>
 
-    <!-- Header -->
+    <!-- Real Mobile Status Bar (Clock, Wi-Fi, 5G, Battery) -->
+    <div class="status-bar" id="statusBar">
+        <div class="status-left">
+            <span id="live-clock">12:00</span>
+        </div>
+        <div class="status-right">
+            <i class="fa-solid fa-signal" style="font-size: 11px;"></i>
+            <span style="font-size: 10px; font-weight: 700;">5G</span>
+            <i class="fa-solid fa-wifi" style="font-size: 12px;"></i>
+            <div class="battery-box">
+                <div class="battery-fill"></div>
+            </div>
+            <span style="font-size: 11px; margin-left: 1px;">85%</span>
+        </div>
+    </div>
+
+    <!-- Messenger Header -->
     <div class="header">
         <div class="header-left">
             <i class="fa-solid fa-arrow-left back-btn"></i>
@@ -226,7 +366,7 @@ CHAT_HTML = """
         </div>
     </div>
 
-    <!-- Bottom Input -->
+    <!-- Bottom Input Area -->
     <div class="input-area">
         <div class="input-icons">
             <i class="fa-solid fa-circle-plus"></i>
@@ -238,9 +378,20 @@ CHAT_HTML = """
         <i class="fa-solid fa-thumbs-up input-right-icon" id="send-icon"></i>
     </div>
 
-    <!-- Universal Smart Keyboard (All 194 Countries & Vowels Supported) -->
+    <!-- REAL GBOARD MOBILE KEYBOARD (EXACT DARK THEME AS SCREENSHOT) -->
     <div class="keyboard-area" id="keyboard">
-        <div class="kb-lang-hint" id="kb-lang">EN</div>
+        <!-- Top Toolbar -->
+        <div class="gboard-toolbar">
+            <div class="tool-icons">
+                <i class="fa-solid fa-chevron-right"></i>
+                <i class="fa-regular fa-face-smile"></i>
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <i class="fa-solid fa-gear"></i>
+                <i class="fa-solid fa-ellipsis"></i>
+            </div>
+            <i class="fa-solid fa-microphone"></i>
+        </div>
+        <!-- 4 Rows of Keys -->
         <div class="kb-row" id="kb-r1"></div>
         <div class="kb-row" id="kb-r2"></div>
         <div class="kb-row" id="kb-r3"></div>
@@ -249,6 +400,19 @@ CHAT_HTML = """
 </div>
 
 <script>
+    // Live Phone Clock Update
+    function updateLiveClock() {
+        const now = new Date();
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+        hours = hours % 12 || 12;
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+        const clockElem = document.getElementById('live-clock');
+        if (clockElem) clockElem.innerText = `${hours}:${minutes}`;
+    }
+    updateLiveClock();
+    setInterval(updateLiveClock, 1000);
+
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
     }
@@ -264,119 +428,194 @@ CHAT_HTML = """
 
     function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-    // UNIVERSAL KEYBOARDS FOR BENGALI (WITH ALL MATRAS), ARABIC, KERALA (MALAYALAM), HINDI & 194 COUNTRIES
-    const predefinedLayouts = {
-        'BN': [
-            ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ'],
-            ['ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'],
-            ['প', 'ফ', 'ব', 'ভ', 'ম', 'য', 'র', 'ল', 'শ', 'স'],
-            ['া', 'ি', 'ী', 'ু', 'ূ', 'ে', 'ৈ', 'ো', 'ৌ', '্']
-        ],
-        'AR': [
-            ['ض', 'ص', 'ث', 'ق', 'ف', 'غ', 'ع', 'ه', 'خ', 'ح', 'ج'],
-            ['ش', 'س', 'ي', 'ب', 'ل', 'ا', 'ت', 'ن', 'م', 'ك', 'ط'],
-            ['ئ', 'ء', 'ؤ', 'ر', 'لا', 'ى', 'ة', 'و', 'ز', 'ظ'],
-            ['َ', 'ُ', 'ِ', 'ّ', 'ْ', 'ً', 'ٌ', 'ٍ', '؟', '!']
-        ],
-        'ML': [ // Kerala (Malayalam)
-            ['ക', 'ഖ', 'ഗ', 'ഘ', 'ങ', 'ച', 'ഛ', 'ജ', 'ഝ', 'ഞ'],
-            ['ട', 'ഠ', 'ഡ', 'ഢ', 'ണ', 'ത', 'ഥ', 'ദ', 'ധ', 'ന'],
-            ['പ', 'ഫ', 'ബ', 'ഭ', 'മ', 'യ', 'ര', 'ല', 'വ', 'ശ'],
-            ['ാ', 'ി', 'ീ', 'ു', 'ൂ', 'െ', 'േ', 'ൈ', 'ൊ', 'ോ']
-        ],
-        'HI': [
-            ['क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ'],
-            ['ट', 'ठ', 'ड', 'ढ', 'ण', 'त', 'थ', 'द', 'ध', 'न'],
-            ['प', 'फ', 'ब', 'भ', 'म', 'य', 'र', 'ल', 'व', 'श'],
-            ['ा', 'ि', 'ी', 'ु', 'ू', 'े', 'ै', 'ो', 'ौ', '्']
-        ],
-        'EN': [
-            ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
-            ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
-            ['z', 'x', 'c', 'v', 'b', 'n', 'm'],
-            ['123', 'space', '.', '?']
-        ]
+    // REAL GBOARD LAYOUTS FOR BENGALI (PROBHAT/AVRO), ENGLISH, ARABIC & 194 COUNTRIES
+    const gboardLayouts = {
+        'BN': {
+            langLabel: '◀ প্রভাত ▶',
+            rows: [
+                [
+                    {c: 'দ', h: '১'}, {c: 'ূ', h: '২'}, {c: 'ী', h: '৩'}, {c: 'র', h: '৪'}, {c: 'ট', h: '৫'}, 
+                    {c: 'এ', h: '৬'}, {c: 'ি', h: '৭'}, {c: 'ও', h: '৮'}, {c: 'প', h: '৯'}, {c: 'চ', h: '০'}
+                ],
+                [
+                    {c: 'া', h: '@'}, {c: 'স', h: '#'}, {c: 'ড', h: '৳'}, {c: 'ত', h: '%'}, {c: 'গ', h: '&'}, 
+                    {c: 'হ', h: '-'}, {c: 'জ', h: '+'}, {c: 'ক', h: '('}, {c: 'ল', h: ')'}, {c: 'ে', h: '='}
+                ],
+                [
+                    {type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'},
+                    {c: 'য়'}, {c: 'শ'}, {c: 'ু'}, {c: 'আ'}, {c: 'ব'}, {c: 'ন'}, {c: 'ম'}, {c: 'ো'},
+                    {type: 'special', icon: '<i class="fa-solid fa-delete-left"></i>'}
+                ],
+                [
+                    {type: 'special', text: '?123'},
+                    {c: ',', h: '☺'},
+                    {type: 'space', text: '◀ প্রভাত ▶'},
+                    {c: '।'},
+                    {type: 'enter', icon: '<i class="fa-solid fa-arrow-turn-down" style="transform: rotate(90deg);"></i>'}
+                ]
+            ]
+        },
+        'EN': {
+            langLabel: '◀ English ▶',
+            rows: [
+                [
+                    {c: 'q', h: '1'}, {c: 'w', h: '2'}, {c: 'e', h: '3'}, {c: 'r', h: '4'}, {c: 't', h: '5'}, 
+                    {c: 'y', h: '6'}, {c: 'u', h: '7'}, {c: 'i', h: '8'}, {c: 'o', h: '9'}, {c: 'p', h: '0'}
+                ],
+                [
+                    {c: 'a', h: '@'}, {c: 's', h: '#'}, {c: 'd', h: '$'}, {c: 'f', h: '_'}, {c: 'g', h: '&'}, 
+                    {c: 'h', h: '-'}, {c: 'j', h: '+'}, {c: 'k', h: '('}, {c: 'l', h: ')'}
+                ],
+                [
+                    {type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'},
+                    {c: 'z'}, {c: 'x'}, {c: 'c'}, {c: 'v'}, {c: 'b'}, {c: 'n'}, {c: 'm'},
+                    {type: 'special', icon: '<i class="fa-solid fa-delete-left"></i>'}
+                ],
+                [
+                    {type: 'special', text: '?123'},
+                    {c: ',', h: '☺'},
+                    {type: 'space', text: '◀ English ▶'},
+                    {c: '.'},
+                    {type: 'enter', icon: '<i class="fa-solid fa-arrow-turn-down" style="transform: rotate(90deg);"></i>'}
+                ]
+            ]
+        },
+        'AR': {
+            langLabel: '◀ العربية ▶',
+            rows: [
+                [
+                    {c: 'ض', h: '١'}, {c: 'ص', h: '٢'}, {c: 'ث', h: '٣'}, {c: 'ق', h: '٤'}, {c: 'ف', h: '٥'}, 
+                    {c: 'غ', h: '٦'}, {c: 'ع', h: '٧'}, {c: 'ه', h: '٨'}, {c: 'خ', h: '٩'}, {c: 'ح', h: '٠'}, {c: 'ج'}, {c: 'د'}
+                ],
+                [
+                    {c: 'ش'}, {c: 'س'}, {c: 'ي'}, {c: 'ب'}, {c: 'ل'}, {c: 'ا'}, {c: 'ت'}, {c: 'ن'}, {c: 'م'}, {c: 'ك'}, {c: 'ط'}
+                ],
+                [
+                    {type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'},
+                    {c: 'ئ'}, {c: 'ء'}, {c: 'ؤ'}, {c: 'ر'}, {c: 'لا'}, {c: 'ى'}, {c: 'ة'}, {c: 'و'}, {c: 'ز'}, {c: 'ظ'},
+                    {type: 'special', icon: '<i class="fa-solid fa-delete-left"></i>'}
+                ],
+                [
+                    {type: 'special', text: '?123'},
+                    {c: '،'},
+                    {type: 'space', text: '◀ العربية ▶'},
+                    {c: '.'},
+                    {type: 'enter', icon: '<i class="fa-solid fa-arrow-turn-down" style="transform: rotate(90deg);"></i>'}
+                ]
+            ]
+        }
     };
 
-    function detectLanguage(text) {
-        for (let char of text) {
-            const code = char.charCodeAt(0);
-            if (code >= 0x0980 && code <= 0x09FF) return 'BN'; // Bengali
-            if (code >= 0x0600 && code <= 0x06FF) return 'AR'; // Arabic
-            if (code >= 0x0D00 && code <= 0x0D7F) return 'ML'; // Malayalam (Kerala)
-            if (code >= 0x0900 && code <= 0x097F) return 'HI'; // Hindi
-            if (char > '~') return 'GLOBAL'; // Any other language from 194 countries
+    function detectScript(text) {
+        for (let ch of text) {
+            const code = ch.charCodeAt(0);
+            if (code >= 0x0980 && code <= 0x09FF) return 'BN';
+            if (code >= 0x0600 && code <= 0x06FF) return 'AR';
+            if (ch > '~') return 'GLOBAL';
         }
         return 'EN';
     }
 
-    function buildKeyboard(text) {
-        const lang = detectLanguage(text);
-        document.getElementById('kb-lang').innerText = lang;
+    function renderGboard(text) {
+        const lang = detectScript(text);
+        let layout = gboardLayouts[lang];
 
-        let rows = predefinedLayouts[lang];
-
-        // DYNAMIC ADAPTIVE GENERATOR FOR ANY OTHER WORLD LANGUAGE (194 COUNTRIES)
-        if (!rows) {
-            const uniqueChars = Array.from(new Set(text.replace(/\\s/g, '')));
-            rows = [[], [], [], ['space', '.', '!', '?']];
-            uniqueChars.forEach((ch, idx) => {
-                rows[idx % 3].push(ch);
+        // Universal Gboard Layout Generator for 194 Countries
+        if (!layout) {
+            const unique = Array.from(new Set(text.replace(/\\s/g, '')));
+            const r1 = [], r2 = [], r3 = [];
+            unique.forEach((c, i) => {
+                const target = i % 3 === 0 ? r1 : (i % 3 === 1 ? r2 : r3);
+                target.push({c: c, h: (i % 9 + 1).toString()});
             });
-            while(rows[0].length < 8) rows[0].push('•');
-            while(rows[1].length < 8) rows[1].push('•');
-            while(rows[2].length < 7) rows[2].push('•');
+            while(r1.length < 10) r1.push({c: '•', h: ''});
+            while(r2.length < 9) r2.push({c: '•', h: ''});
+            while(r3.length < 7) r3.push({c: '•', h: ''});
+
+            layout = {
+                langLabel: '◀ Global ▶',
+                rows: [
+                    r1,
+                    r2,
+                    [{type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'}, ...r3, {type: 'special', icon: '<i class="fa-solid fa-delete-left"></i>'}],
+                    [
+                        {type: 'special', text: '?123'},
+                        {c: ','},
+                        {type: 'space', text: '◀ Global ▶'},
+                        {c: '.'},
+                        {type: 'enter', icon: '<i class="fa-solid fa-arrow-turn-down" style="transform: rotate(90deg);"></i>'}
+                    ]
+                ]
+            };
         }
 
-        for (let i = 1; i <= 4; i++) {
-            const rowElem = document.getElementById(`kb-r${i}`);
+        for (let r = 1; r <= 4; r++) {
+            const rowElem = document.getElementById(`kb-r${r}`);
             rowElem.innerHTML = '';
-            const rowData = rows[i - 1] || [];
-            for (let ch of rowData) {
-                const keyDiv = document.createElement('div');
-                keyDiv.className = 'kb-key';
-                keyDiv.id = 'key-' + encodeURIComponent(ch);
-                keyDiv.innerText = ch;
-                if (ch === 'space') keyDiv.style.flex = '3';
-                rowElem.appendChild(keyDiv);
-            }
+            const rowData = layout.rows[r - 1];
+
+            rowData.forEach(item => {
+                const key = document.createElement('div');
+                key.className = 'kb-key';
+
+                if (item.type === 'special') {
+                    key.classList.add('special');
+                    key.innerHTML = item.icon || item.text;
+                } else if (item.type === 'space') {
+                    key.classList.add('space-key');
+                    key.innerHTML = item.text;
+                } else if (item.type === 'enter') {
+                    key.classList.add('enter-key');
+                    key.innerHTML = item.icon;
+                } else {
+                    key.setAttribute('data-char', item.c);
+                    key.innerHTML = `${item.c}${item.h ? `<span class="hint">${item.h}</span>` : ''}`;
+                }
+                rowElem.appendChild(key);
+            });
         }
     }
 
     async function simulateTypingKeyboard(text) {
         const kb = document.getElementById('keyboard');
-        buildKeyboard(text);
+        renderGboard(text);
         kb.classList.add('active'); 
-        await sleep(400);
+        await sleep(350);
 
         const input = document.getElementById('msg-input');
         const icon = document.getElementById('send-icon');
-        icon.classList.remove('fa-thumbs-up'); icon.classList.add('fa-paper-plane');
+        icon.classList.remove('fa-thumbs-up'); 
+        icon.classList.add('fa-paper-plane');
         
-        // Accurate character-by-character animation including Bengali Car/Matras
+        // Exact letter-by-letter typing with full Gboard key-press animation
         const chars = Array.from(text);
         for (let i = 0; i < chars.length; i++) {
             const ch = chars[i];
             input.value += ch;
 
-            // Highlight the exact key if present
-            const keyElem = document.getElementById('key-' + encodeURIComponent(ch));
-            if (keyElem) {
-                keyElem.classList.add('pressed');
-                setTimeout(() => keyElem.classList.remove('pressed'), 120);
-            } else {
-                const allKeys = document.querySelectorAll('.kb-key');
-                if (allKeys.length > 0) {
-                    const rnd = allKeys[Math.floor(Math.random() * allKeys.length)];
-                    rnd.classList.add('pressed');
-                    setTimeout(() => rnd.classList.remove('pressed'), 120);
+            // Highlight the exact key on Gboard
+            let targetKey = document.querySelector(`.kb-key[data-char="${ch}"]`);
+            if (!targetKey && ch === ' ') {
+                targetKey = document.querySelector('.kb-key.space-key');
+            }
+            if (!targetKey) {
+                const normalKeys = document.querySelectorAll('.kb-key[data-char]');
+                if (normalKeys.length > 0) {
+                    targetKey = normalKeys[Math.floor(Math.random() * normalKeys.length)];
                 }
             }
-            await sleep(140); 
+
+            if (targetKey) {
+                targetKey.classList.add('pressed');
+                setTimeout(() => targetKey.classList.remove('pressed'), 110);
+            }
+            await sleep(130); 
         }
-        await sleep(500); 
+
+        await sleep(400); 
         input.value = "";
-        icon.classList.remove('fa-paper-plane'); icon.classList.add('fa-thumbs-up');
+        icon.classList.remove('fa-paper-plane'); 
+        icon.classList.add('fa-thumbs-up');
         kb.classList.remove('active'); 
         await sleep(250);
     }
@@ -397,13 +636,11 @@ CHAT_HTML = """
         scrollToBottom();
     }
 
-    // MAIN AUTO FUNCTION (NO BROWSER POPUPS, 100% CLEAN FULLSCREEN)
+    // MAIN AUTO START FUNCTION
     async function startAutoChat() {
-        // ১. ওভারলে হাইড
         document.getElementById('overlay').style.display = 'none';
         await sleep(500);
 
-        // ২. মেসেজ অ্যানিমেশন
         for (let msg of chatData.messages) {
             if (msg.sender === "1") {
                 await simulateTypingKeyboard(msg.text); 
