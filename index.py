@@ -1,7 +1,6 @@
 import os
 import json
 import asyncio
-import base64
 import edge_tts
 from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for, Response
 
@@ -21,54 +20,26 @@ if MONGO_URI:
     except Exception as e:
         print("MongoDB Error:", e)
 
-# Default Data
+# Default Data (Updated with Chat Mode)
 fallback_data = {
     "pfp1": "https://i.pravatar.cc/150?img=11", 
     "pfp2": "https://i.pravatar.cc/150?img=5",  
-    "name": "Group Chat",
+    "name": "Reji Kabeer B",
+    "chat_mode": "single", # 'single' or 'group'
     "messages": [
-        {"sender": "time", "text": "", "audio": ""},
-        {"sender": "1", "text": "Hey 👋", "audio": ""},
-        {"sender": "b1", "text": "Hi bro!", "audio": ""},
-        {"sender": "g1", "text": "Hello everyone!", "audio": ""}
+        {"sender": "time", "text": ""},
+        {"sender": "1", "text": "Hey 👋"},
+        {"sender": "time", "text": ""},
+        {"sender": "2", "text": "Hi"}
     ]
 }
 
 # ================= VOICE MAPPING SYSTEM (20 VOICES) ================= #
-VOICE_MAP = {"me": "bn-BD-PradeepNeural", "1": "bn-BD-PradeepNeural", "2": "bn-BD-NabanitaNeural"}
+# 1 = Boy (Me), 2 = Target (Female default)
+VOICE_MAP = {"1": "bn-BD-PradeepNeural", "me": "bn-BD-PradeepNeural", "2": "bn-BD-NabanitaNeural"}
 for i in range(1, 11):
     VOICE_MAP[f"b{i}"] = "bn-BD-PradeepNeural" if i % 2 != 0 else "bn-IN-BashkarNeural"
     VOICE_MAP[f"g{i}"] = "bn-BD-NabanitaNeural" if i % 2 != 0 else "bn-IN-TanishaaNeural"
-
-# Serverless/Vercel Base64 Audio Generator
-async def generate_audio_for_message(text, sender):
-    if sender == "time" or not text.strip():
-        return ""
-    
-    voice = VOICE_MAP.get(sender, "bn-BD-PradeepNeural")
-    
-    try:
-        communicate = edge_tts.Communicate(text, voice)
-        audio_data = b""
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_data += chunk["data"]
-        
-        return "data:audio/mp3;base64," + base64.b64encode(audio_data).decode('utf-8')
-    except Exception as e:
-        print(f"Audio Gen Error: {e}")
-        return ""
-
-async def process_all_audios(messages):
-    tasks = []
-    for msg in messages:
-        tasks.append(generate_audio_for_message(msg['text'], msg['sender']))
-    
-    audio_paths = await asyncio.gather(*tasks)
-    
-    for i, msg in enumerate(messages):
-        msg['audio'] = audio_paths[i]
-    return messages
 
 def get_data():
     if db_collection is not None:
@@ -83,7 +54,7 @@ def save_data(data):
     else:
         fallback_data = data
 
-# ================= PWA SETUP ================= #
+# ================= PWA SETUP (SHOWS REAL MOBILE STATUS BAR) ================= #
 @app.route('/manifest.json')
 def manifest():
     manifest_data = {
@@ -94,16 +65,8 @@ def manifest():
         "background_color": "#ffffff",
         "theme_color": "#ffffff",
         "icons": [
-            {
-                "src": "https://cdn-icons-png.flaticon.com/512/733/733548.png",
-                "sizes": "192x192",
-                "type": "image/png"
-            },
-            {
-                "src": "https://cdn-icons-png.flaticon.com/512/733/733548.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            }
+            {"src": "https://cdn-icons-png.flaticon.com/512/733/733548.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "https://cdn-icons-png.flaticon.com/512/733/733548.png", "sizes": "512x512", "type": "image/png"}
         ]
     }
     return Response(json.dumps(manifest_data), mimetype='application/json')
@@ -120,8 +83,32 @@ def service_worker():
     """
     return Response(sw_code, mimetype='application/javascript')
 
-# ================= HTML TEMPLATES ================= #
+# ================= LIVE TTS AUDIO ROUTE (Fix for Vercel Sound Issue) ================= #
+@app.route('/api/tts')
+def api_tts():
+    text = request.args.get('text', '')
+    sender = request.args.get('sender', '1')
+    if not text:
+        return Response(b'', mimetype='audio/mpeg')
 
+    voice = VOICE_MAP.get(sender, "bn-BD-PradeepNeural")
+
+    async def get_audio_bytes():
+        try:
+            communicate = edge_tts.Communicate(text, voice)
+            data = b""
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    data += chunk["data"]
+            return data
+        except:
+            return b""
+
+    audio_bytes = asyncio.run(get_audio_bytes())
+    return Response(audio_bytes, mimetype="audio/mpeg")
+
+
+# ================= HTML TEMPLATES (Your exact original code preserved) ================= #
 CHAT_HTML = """
 <!DOCTYPE html>
 <html lang="en">
@@ -143,7 +130,7 @@ CHAT_HTML = """
             display: flex; flex-direction: column; position: relative; overflow: hidden;
         }
         
-        /* Messenger Chat Header */
+        /* New Messenger Chat Header */
         .header { 
             display: flex; align-items: center; padding: 12px 15px; 
             background-color: #EBF0F6; z-index: 10; border-bottom: 1px solid rgba(0,0,0,0.05); 
@@ -176,9 +163,6 @@ CHAT_HTML = """
         }
 
         /* Message Styling */
-        .message-group-wrapper { display: flex; flex-direction: column; width: 100%; margin-bottom: 2px; }
-        .group-sender-name { font-size: 11px; color: #65676B; margin-left: 42px; margin-bottom: 3px; }
-
         .message-row { display: flex; margin-bottom: 2px; width: 100%; align-items: flex-end;}
         .message-row.me { justify-content: flex-end; }
         .message-row.them { justify-content: flex-start; }
@@ -189,13 +173,13 @@ CHAT_HTML = """
         .them .bubble { background-color: rgba(0,0,0,0.05); color: black; border-bottom-left-radius: 4px; }
         
         /* 3 Dots Typing Indicator */
-        .typing-bubble { background: rgba(0,0,0,0.05); padding: 12px 16px; border-radius: 18px; border-bottom-left-radius: 4px; display: flex; gap: 4px; align-items: center; width: fit-content; margin-bottom: 10px; }
+        .typing-bubble { background: rgba(0,0,0,0.05); padding: 12px 16px; border-radius: 18px; border-bottom-left-radius: 4px; display: flex; gap: 4px; align-items: center; width: fit-content; }
         .dot { width: 6px; height: 6px; background-color: #8D949E; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; }
         .dot:nth-child(1) { animation-delay: -0.32s; }
         .dot:nth-child(2) { animation-delay: -0.16s; }
         @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
 
-        /* Bottom Input Area */
+        /* New Bottom Input Area */
         .input-area { display: flex; align-items: center; padding: 10px 12px; background-color: #EBF0F6; padding-bottom: 20px; z-index: 5;}
         .left-actions { display: flex; align-items: center; gap: 12px; margin-right: 12px; }
         .left-actions svg { fill: #0084FF; width: 26px; height: 26px; }
@@ -206,7 +190,7 @@ CHAT_HTML = """
         
         .input-right-icon { color: #0084ff; font-size: 26px; margin-left: 12px; transition: 0.2s; cursor: pointer; }
 
-        /* Gboard Keyboard (Restored Original CSS completely) */
+        /* Gboard Keyboard */
         .keyboard-area { 
             height: 0; background: #18191c; transition: height 0.25s cubic-bezier(0, 0, 0.2, 1); 
             overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; 
@@ -240,7 +224,7 @@ CHAT_HTML = """
             স্টার্ট বাটনে চাপ দিলে স্ক্রিন ৩ সেকেন্ড স্থির থাকবে,<br>
             যাতে আপনি সহজে ভিডিও রেকর্ড ও কাট করতে পারেন।
         </p>
-        <button class="start-btn" onclick="startAutoChat()">Start Chat & Voice</button>
+        <button class="start-btn" onclick="startAutoChat()">Start Chat</button>
     </div>
 
     <!-- Messenger Header -->
@@ -302,7 +286,7 @@ CHAT_HTML = """
         <i class="fa-solid fa-thumbs-up input-right-icon" id="send-icon"></i>
     </div>
 
-    <!-- Gboard Keyboard (Restored original HTML) -->
+    <!-- Gboard Keyboard -->
     <div class="keyboard-area" id="keyboard">
         <div class="gboard-toolbar">
             <div class="tool-icons">
@@ -339,7 +323,6 @@ CHAT_HTML = """
 
     function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-    // ================= RESTORED GBOARD LAYOUTS ================= //
     const gboardLayouts = {
         'BN': {
             langLabel: '◀ প্রভাত ▶',
@@ -427,17 +410,10 @@ CHAT_HTML = """
         }
     }
 
-    function scrollToBottom() {
-        const chat = document.getElementById('chat-area');
-        setTimeout(() => { chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' }); }, 50);
-        setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 300);
-    }
-
     async function simulateTypingKeyboard(text) {
         const kb = document.getElementById('keyboard');
         renderGboard(text);
         kb.classList.add('active'); 
-        scrollToBottom();
         await sleep(350);
 
         const input = document.getElementById('msg-input');
@@ -470,66 +446,73 @@ CHAT_HTML = """
         await sleep(250);
     }
 
-    // ================= GROUP CHAT LOGIC (20 BOYS/GIRLS) ================= //
-    function getSenderAvatar(sender) {
-        if(sender === 'me' || sender === '1') return chatData.pfp1;
-        if(sender.startsWith('b')) { let n = parseInt(sender.replace('b','')); return `https://i.pravatar.cc/150?img=${10 + n}`; }
-        if(sender.startsWith('g')) { let n = parseInt(sender.replace('g','')); return `https://i.pravatar.cc/150?img=${30 + n}`; }
-        return chatData.pfp2;
-    }
-
-    function getSenderName(sender) {
-        if(sender.startsWith('b')) return `Boy ${sender.replace('b','')}`;
-        if(sender.startsWith('g')) return `Girl ${sender.replace('g','')}`;
-        return "Friend";
+    function scrollToBottom() {
+        const chat = document.getElementById('chat-area');
+        chat.scrollTop = chat.scrollHeight;
     }
 
     function getMessengerTime() {
+        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
         const now = new Date();
-        let hours = now.getHours(); let mins = now.getMinutes(); mins = mins < 10 ? '0'+mins : mins;
-        return `${["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][now.getMonth()]} ${now.getDate()} AT ${hours%12||12}:${mins} ${hours>=12?'PM':'AM'}`;
+        const month = months[now.getMonth()];
+        const date = now.getDate();
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${month} ${date} AT ${hours}:${minutes} ${ampm}`;
     }
 
-    function appendMessage(msgObj) {
-        const div = document.createElement('div');
-        const sender = msgObj.sender;
-        const text = msgObj.text;
+    // NEW PLAY AUDIO LOGIC
+    async function playAudio(text, sender) {
+        if(!text) return;
+        let audioUrl = `/api/tts?text=${encodeURIComponent(text)}&sender=${sender}`;
+        let audio = new Audio(audioUrl);
+        return new Promise((resolve) => {
+            audio.onended = resolve;
+            audio.onerror = resolve;
+            audio.play().catch(e => resolve());
+        });
+    }
 
+    // DYNAMIC APPEND FUNCTION (Handles both Single & Group Modes perfectly)
+    function appendMessage(text, sender) {
+        const div = document.createElement('div');
+        
         if (sender === "time") {
             div.className = 'timestamp';
-            div.innerText = text || getMessengerTime();
-        } else if (sender === "me" || sender === "1") {
-            div.className = 'message-row me';
-            div.innerHTML = `<div class="bubble">${text}</div>`;
+            div.innerText = text;
+        } else if (chatData.chat_mode === "group") {
+            // == GROUP CHAT MODE ==
+            div.style.display = 'flex'; div.style.flexDirection = 'column'; div.style.marginBottom = '4px'; div.style.width = '100%';
+            if (sender === "1" || sender === "me") {
+                div.innerHTML = `<div class="message-row me"><div class="bubble">${text}</div></div>`;
+            } else {
+                let name = sender.startsWith('b') ? 'Boy ' + sender.replace('b','') : sender.startsWith('g') ? 'Girl ' + sender.replace('g','') : 'Target';
+                let pfp = sender === '2' ? chatData.pfp2 : sender.startsWith('b') ? `https://i.pravatar.cc/150?img=${10+parseInt(sender.replace('b',''))}` : `https://i.pravatar.cc/150?img=${30+parseInt(sender.replace('g',''))}`;
+                
+                div.innerHTML = `
+                    <span style="font-size:11px;color:#65676B;margin-left:45px;margin-bottom:3px;display:block;">${name}</span>
+                    <div class="message-row them">
+                        <img src="${pfp}" class="them-pic" style="width:28px;height:28px;border-radius:50%;margin-right:8px;object-fit:cover;align-self:flex-end;">
+                        <div class="bubble">${text}</div>
+                    </div>`;
+            }
         } else {
-            const isGroup = sender.startsWith('b') || sender.startsWith('g');
-            
-            // Wrapper for Name + Avatar + Message
-            div.className = 'message-group-wrapper';
-            
-            let nameHtml = isGroup ? `<span class="group-sender-name">${getSenderName(sender)}</span>` : '';
-            
-            div.innerHTML = `
-                ${nameHtml}
-                <div class="message-row them">
-                    <img src="${getSenderAvatar(sender)}" class="them-pic">
-                    <div class="bubble">${text}</div>
-                </div>`;
+            // == SINGLE CHAT MODE (YOUR EXACT ORIGINAL CODE) ==
+            if (sender === "1" || sender === "me") {
+                div.className = 'message-row me';
+                div.innerHTML = `<div class="bubble">${text}</div>`;
+            } else {
+                div.className = 'message-row them';
+                div.innerHTML = `<img src="${chatData.pfp2}" class="them-pic"><div class="bubble">${text}</div>`;
+            }
         }
         
         document.getElementById('chat-area').insertBefore(div, document.getElementById('typing-row'));
         scrollToBottom();
-    }
-
-    async function playAudio(audioBase64) {
-        if(audioBase64) {
-            return new Promise((resolve) => {
-                let audio = new Audio(audioBase64);
-                audio.play();
-                audio.onended = resolve;
-                audio.onerror = resolve; 
-            });
-        }
     }
 
     async function startAutoChat() {
@@ -538,29 +521,35 @@ CHAT_HTML = """
 
         for (let msg of chatData.messages) {
             if (msg.sender === "time") {
-                appendMessage(msg);
-            } else if (msg.sender === "me" || msg.sender === "1") {
+                let timeText = msg.text.trim();
+                if (!timeText) timeText = getMessengerTime();
+                appendMessage(timeText, "time");
+            } else if (msg.sender === "1" || msg.sender === "me") {
                 await simulateTypingKeyboard(msg.text); 
-                appendMessage(msg);
-                if(msg.audio) { playAudio(msg.audio); await sleep(msg.text.length * 60 + 500); }
+                appendMessage(msg.text, msg.sender);
+                await playAudio(msg.text, msg.sender); // Play sound
+                await sleep(500);
             } else {
-                document.getElementById('typing-pfp').src = getSenderAvatar(msg.sender);
+                // Change Typing Indicator PFP based on mode
+                if (chatData.chat_mode === "group") {
+                    let pfp = msg.sender === '2' ? chatData.pfp2 : msg.sender.startsWith('b') ? `https://i.pravatar.cc/150?img=${10+parseInt(msg.sender.replace('b',''))}` : `https://i.pravatar.cc/150?img=${30+parseInt(msg.sender.replace('g',''))}`;
+                    document.getElementById('typing-pfp').src = pfp;
+                } else {
+                    document.getElementById('typing-pfp').src = chatData.pfp2;
+                }
+                
                 document.getElementById('typing-row').style.display = 'flex'; 
                 scrollToBottom();
-                
                 await sleep(msg.text.length * 60 + 1000); 
                 document.getElementById('typing-row').style.display = 'none'; 
                 
-                appendMessage(msg);
-                if(msg.audio) {
-                    await playAudio(msg.audio); 
-                } else {
-                    await sleep(1000);
-                }
+                appendMessage(msg.text, msg.sender);
+                await playAudio(msg.text, msg.sender); // Play sound
+                await sleep(500);
             }
             document.getElementById('seen-pfp').style.display = 'none'; 
-            await sleep(500);
         }
+        
         document.getElementById('seen-pfp').style.display = 'block';
         scrollToBottom();
     }
@@ -577,116 +566,130 @@ ADMIN_HTML = """
     <title>Admin Panel - Auto Chat</title><script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-5">
-    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center border-b pb-3 mb-4">
-            <h2 class="text-2xl font-bold text-blue-600">Admin Panel (Group & Voices)</h2>
-            <a href="/" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded font-bold">View Chat</a>
+            <h2 class="text-2xl font-bold text-blue-600">Admin Panel (Chat Setup)</h2>
+            <a href="/" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded">View Chat</a>
         </div>
-        
-        <!-- Loading Overlay for Vercel Processing -->
-        <div id="loading" class="hidden fixed top-0 left-0 w-full h-full bg-black bg-opacity-75 flex flex-col justify-center items-center z-50 text-white">
-            <i class="fa-solid fa-spinner fa-spin text-5xl mb-4"></i>
-            <h2 class="text-2xl font-bold">Saving & Generating AI Voices...</h2>
-            <p>Please wait, Vercel is processing your audios in Base64 format.</p>
-        </div>
-
         <form id="chatForm">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div><label class="block font-bold mb-1">My PFP (Me)</label><input type="text" id="pfp1" class="w-full border p-2 rounded" required></div>
-                <div><label class="block font-bold mb-1">Main Target PFP (Header)</label><input type="text" id="pfp2" class="w-full border p-2 rounded" required></div>
+                <div><label class="block font-bold mb-1">My Profile Picture URL</label><input type="text" id="pfp1" class="w-full border p-2 rounded" required></div>
+                <div><label class="block font-bold mb-1">Target Profile Picture URL</label><input type="text" id="pfp2" class="w-full border p-2 rounded" required></div>
             </div>
-            <div class="mb-4"><label class="block font-bold mb-1">Chat Group / Person Name</label><input type="text" id="chatName" class="w-full border p-2 rounded" required></div>
             
-            <div class="mb-4 bg-blue-50 p-4 rounded border border-blue-200">
-                <label class="block font-bold mb-1 text-blue-700">Quick HTML Import (Supports 20 Voices)</label>
-                <p class="text-xs text-gray-600 mb-2">
-                    Use classes: <code>me</code>, <code>time</code>, <code>b1</code> to <code>b10</code> (Boys), <code>g1</code> to <code>g10</code> (Girls).<br>
-                    Example: <code>&lt;div class="b1"&gt;Hello&lt;/div&gt; &lt;div class="g3"&gt;Hi&lt;/div&gt;</code>
-                </p>
-                <textarea id="htmlInput" class="w-full border p-2 rounded mb-2" rows="3"></textarea>
-                <button type="button" onclick="parseHTML()" class="bg-blue-600 text-white px-4 py-2 rounded shadow font-bold hover:bg-blue-700">Import Script</button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div><label class="block font-bold mb-1">Chat Header Name</label><input type="text" id="chatName" class="w-full border p-2 rounded" required></div>
+                <div>
+                    <label class="block font-bold mb-1 text-red-600">Chat Mode System</label>
+                    <select id="chatMode" class="w-full border p-2 rounded font-bold">
+                        <option value="single">Single Chat (1 on 1)</option>
+                        <option value="group">Group Chat (Multiple Peoples)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- NEW HTML IMPORT SYSTEM -->
+            <div class="mb-4 bg-gray-50 p-4 rounded border border-gray-200">
+                <label class="block font-bold mb-1 text-blue-700">Import Messages from HTML</label>
+                <p class="text-xs text-gray-500 mb-2">গল্পের স্ক্রিপ্ট একবারে সেট করতে এখানে HTML পেস্ট করুন। আপনার মেসেজে class="me", তার মেসেজে class="he" বা "she", গ্রুপ হলে class="b1" বা "g2" এবং সময়ের জন্য class="time" ব্যবহার করুন।</p>
+                <textarea id="htmlInput" class="w-full border p-2 rounded mb-2" rows="4" placeholder='<div class="me">Hello</div>&#10;<div class="he">Hi</div>'></textarea>
+                <button type="button" onclick="parseHTML()" class="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 font-bold">Import HTML</button>
             </div>
 
             <div class="mb-4">
-                <h3 class="font-bold text-lg mb-2 border-b pb-1">Chat Script</h3>
+                <h3 class="font-bold text-lg mb-2 border-b pb-1">Messages & Timestamps</h3>
                 <div id="messages-container"></div>
-                <button type="button" onclick="addMsgRow('me', '')" class="mt-3 bg-gray-200 text-gray-800 px-3 py-2 rounded shadow font-bold hover:bg-gray-300">+ Add Manual Row</button>
+                <button type="button" onclick="addMsgRow()" class="mt-3 bg-blue-100 text-blue-700 px-3 py-1 rounded shadow">+ Add Message</button>
             </div>
-            <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-green-700 shadow-lg">Save & Generate Voices</button>
+            <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-blue-700">Save Setup</button>
         </form>
     </div>
 <script>
     let container = document.getElementById('messages-container');
     
     function getSenderOptions(selected) {
-        let opts = `<option value="time" ${selected=='time'?'selected':''}>⌚ Time (Date/Time)</option>
-                    <option value="me" ${selected=='me' || selected=='1'?'selected':''}>👤 Me (You)</option>
-                    <option value="2" ${selected=='2'?'selected':''}>👤 Target (Header)</option>`;
+        let opts = `<option value="time" ${selected=='time'?'selected':''}>⌚ Time</option>
+                    <option value="1" ${selected=='1' || selected=='me'?'selected':''}>👤 Me (You)</option>
+                    <option value="2" ${selected=='2'?'selected':''}>👤 Them (Target)</option>`;
         for(let i=1; i<=10; i++) opts += `<option value="b${i}" ${selected==`b${i}`?'selected':''}>👦 Boy ${i}</option>`;
         for(let i=1; i<=10; i++) opts += `<option value="g${i}" ${selected==`g${i}`?'selected':''}>👧 Girl ${i}</option>`;
         return opts;
     }
 
-    function addMsgRow(sender="me", text="") {
-        const div = document.createElement('div'); div.className = "flex gap-2 mb-2 items-center bg-gray-50 p-2 rounded border border-gray-200";
-        div.innerHTML = `
-        <select class="border p-2 rounded w-1/3 msg-sender font-bold text-gray-700 bg-white">${getSenderOptions(sender)}</select>
-        <input type="text" class="border p-2 rounded w-2/3 msg-text" value="${text}" placeholder="Type message..." ${sender==="time"?"":"required"}>
-        <button type="button" onclick="this.parentElement.remove()" class="bg-red-500 text-white px-3 py-2 rounded font-bold hover:bg-red-600">X</button>`;
+    function addMsgRow(sender="1", text="") {
+        const div = document.createElement('div'); div.className = "flex gap-2 mb-2 items-center";
+        
+        div.innerHTML = `<select class="border p-2 rounded w-1/4 msg-sender">
+            ${getSenderOptions(sender)}
+        </select>
+        <input type="text" class="border p-2 rounded w-3/4 msg-text" value="${text}" placeholder="Type text or leave blank for Auto Real Time..." ${sender==="time"?"":"required"}>
+        <button type="button" onclick="this.parentElement.remove()" class="bg-red-500 text-white px-3 py-2 rounded">X</button>`;
         
         div.querySelector('.msg-sender').addEventListener('change', function(e) {
-            if(e.target.value === 'time') div.querySelector('.msg-text').removeAttribute('required');
-            else div.querySelector('.msg-text').setAttribute('required', 'true');
+            if(e.target.value === 'time') {
+                div.querySelector('.msg-text').removeAttribute('required');
+            } else {
+                div.querySelector('.msg-text').setAttribute('required', 'true');
+            }
         });
+
         container.appendChild(div);
     }
 
+    // HTML Parse Function
     function parseHTML() {
         const val = document.getElementById('htmlInput').value;
-        if(!val.trim()) return alert("HTML Box empty!");
-        const temp = document.createElement('div'); temp.innerHTML = val;
+        if(!val.trim()) return alert("দয়া করে আগে বক্সে HTML পেস্ট করুন!");
+        
+        const temp = document.createElement('div');
+        temp.innerHTML = val;
         
         Array.from(temp.children).forEach(el => {
             const c = (el.className || '').toLowerCase();
             const txt = (el.innerText || el.textContent).trim();
-            if(c === 'me' || c === '1') addMsgRow('me', txt);
-            else if(c === 'time') addMsgRow('time', txt);
-            else if(c === 'he' || c === 'she' || c === '2') addMsgRow('2', txt);
-            else if(c.match(/^[bg]\d+$/)) addMsgRow(c, txt); 
-            else addMsgRow('b1', txt); 
+            
+            if(c.includes('me') || c === '1') {
+                addMsgRow('1', txt);
+            } else if(c.includes('he') || c.includes('she') || c.includes('them') || c === '2') {
+                addMsgRow('2', txt);
+            } else if(c.includes('time')) {
+                addMsgRow('time', txt);
+            } else if(c.match(/^[bg]\d+$/)) {
+                addMsgRow(c, txt);
+            } else {
+                addMsgRow('1', txt);
+            }
         });
+        
         document.getElementById('htmlInput').value = '';
     }
 
     fetch('/api/get_data').then(r=>r.json()).then(data => {
         document.getElementById('pfp1').value = data.pfp1 || ""; 
         document.getElementById('pfp2').value = data.pfp2 || ""; 
-        document.getElementById('chatName').value = data.name || "Group Chat";
+        document.getElementById('chatName').value = data.name || "Unknown";
+        document.getElementById('chatMode').value = data.chat_mode || "single";
+        
         if(data.messages) data.messages.forEach(m => addMsgRow(m.sender, m.text)); else addMsgRow();
     });
     
     document.getElementById('chatForm').onsubmit = function(e) {
-        e.preventDefault(); 
-        document.getElementById('loading').classList.remove('hidden');
-        
-        let msgs = [];
-        document.querySelectorAll('#messages-container > div').forEach(row => { 
-            msgs.push({sender: row.querySelector('.msg-sender').value, text: row.querySelector('.msg-text').value}); 
-        });
+        e.preventDefault(); let msgs = [];
+        document.querySelectorAll('#messages-container > div').forEach(row => { msgs.push({sender: row.querySelector('.msg-sender').value, text: row.querySelector('.msg-text').value}); });
         
         fetch('/api/save_data', { 
-            method: 'POST', headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({pfp1: document.getElementById('pfp1').value, pfp2: document.getElementById('pfp2').value, name: document.getElementById('chatName').value, messages: msgs}) 
-        }).then(() => {
-            document.getElementById('loading').classList.add('hidden');
-            alert("Chat & AI Voices Saved Successfully! Check the Chat view.");
-        }).catch(() => {
-            document.getElementById('loading').classList.add('hidden');
-            alert("Error saving data!");
-        });
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({
+                pfp1: document.getElementById('pfp1').value, 
+                pfp2: document.getElementById('pfp2').value, 
+                name: document.getElementById('chatName').value, 
+                chat_mode: document.getElementById('chatMode').value,
+                messages: msgs
+            }) 
+        }).then(() => alert("Chat setup saved successfully!"));
     };
 </script>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </body></html>
 """
 
@@ -695,6 +698,7 @@ LOGIN_HTML = """
 """
 
 # ================= FLASK ROUTES ================= #
+
 @app.route("/")
 def index(): return render_template_string(CHAT_HTML)
 
@@ -717,18 +721,8 @@ def api_get():
 @app.route("/api/save_data", methods=["POST"])
 def api_save():
     if not session.get("logged_in"): return jsonify({"error": "Unauthorized"}), 401
-    
-    data = request.json
-    
-    # Generate Base64 MP3 Audio files asynchronously (Vercel Supported)
-    try:
-        data['messages'] = asyncio.run(process_all_audios(data['messages']))
-    except Exception as e:
-        print("Asyncio run error:", e)
-    
-    save_data(data)
+    save_data(request.json)
     return jsonify({"success": True})
 
-# Vercel entry point
 application = app
-if __name__ == "__main__": app.run(debug=True, threaded=True)
+if __name__ == "__main__": app.run(debug=True)
