@@ -18,19 +18,19 @@ if MONGO_URI:
     except:
         pass
 
-# Default Data (Updated with Date/Time gaps mapping your screenshot)
+# Default Data
 fallback_data = {
     "pfp1": "https://i.pravatar.cc/150?img=11", 
     "pfp2": "https://i.pravatar.cc/150?img=5",  
     "name": "Reji Kabeer B",
     "messages": [
-        {"sender": "time", "text": "SEP 3 AT 11:24 PM"},
+        {"sender": "time", "text": ""}, # Empty text will trigger Auto-Time
         {"sender": "1", "text": "Hey 👋"},
-        {"sender": "time", "text": "SEP 7 AT 6:34 PM"},
+        {"sender": "time", "text": ""},
         {"sender": "1", "text": "Hi"},
-        {"sender": "time", "text": "SEP 8 AT 1:40 PM"},
+        {"sender": "time", "text": ""},
         {"sender": "2", "text": "Hi"},
-        {"sender": "time", "text": "SEP 8 AT 7:35 PM"},
+        {"sender": "time", "text": ""},
         {"sender": "1", "text": "Hi"}
     ]
 }
@@ -430,7 +430,6 @@ CHAT_HTML = """
         chat.scrollTop = chat.scrollHeight;
     }
 
-    // UPDATED FUNCTION TO HANDLE TIME GAPS
     function appendMessage(text, sender) {
         const div = document.createElement('div');
         
@@ -449,24 +448,52 @@ CHAT_HTML = """
         scrollToBottom();
     }
 
-    // MAIN AUTO START
+    // ================= NEW AUTO TIME SYSTEM ================= //
+    function getMessengerTime(offsetMinutes = 0) {
+        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + offsetMinutes);
+        const month = months[now.getMonth()];
+        const date = now.getDate();
+        let hours = now.getHours();
+        const minutes = now.getMinutes() < 10 ? '0' + now.getMinutes() : now.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${month} ${date} AT ${hours}:${minutes} ${ampm}`;
+    }
+
+    // MAIN AUTO START (UPDATED FOR AUTO TIME)
     async function startAutoChat() {
         document.getElementById('overlay').style.display = 'none';
         await sleep(3000);
 
+        let msgCounter = 0;
+
+        // Auto inject real-time at the very top if it's not already a time block
+        if (chatData.messages.length > 0 && chatData.messages[0].sender !== "time") {
+            appendMessage(getMessengerTime(0), "time");
+        }
+
         for (let msg of chatData.messages) {
             if (msg.sender === "time") {
-                appendMessage(msg.text, "time");
-                // no sleep needed for timestamp, it pops instantly
+                // Auto generate time if user left it blank or used default text
+                let timeText = msg.text.trim();
+                if (!timeText || timeText.toLowerCase() === "auto" || timeText.includes("SEP 3") || timeText.includes("Date")) {
+                    timeText = getMessengerTime(msgCounter * 2); // Time increases slightly
+                }
+                appendMessage(timeText, "time");
             } else if (msg.sender === "1") {
                 await simulateTypingKeyboard(msg.text); 
                 appendMessage(msg.text, "1");
+                msgCounter++;
             } else {
                 document.getElementById('typing-row').style.display = 'flex'; 
                 scrollToBottom();
                 await sleep(msg.text.length * 60 + 1000); 
                 document.getElementById('typing-row').style.display = 'none'; 
                 appendMessage(msg.text, "2");
+                msgCounter++;
             }
             document.getElementById('seen-pfp').style.display = 'none'; 
             await sleep(1000);
@@ -512,14 +539,23 @@ ADMIN_HTML = """
     function addMsgRow(sender="1", text="") {
         const div = document.createElement('div'); div.className = "flex gap-2 mb-2 items-center";
         
-        // NEW ADMIN OPTION: Added "Time (Date/Time)" selector
         div.innerHTML = `<select class="border p-2 rounded w-1/4 msg-sender">
             <option value="1" ${sender==="1"?"selected":""}>Me</option>
             <option value="2" ${sender==="2"?"selected":""}>Them</option>
             <option value="time" ${sender==="time"?"selected":""}>Time (Date/Time)</option>
         </select>
-        <input type="text" class="border p-2 rounded w-3/4 msg-text" value="${text}" placeholder="Type text or Date (e.g. SEP 3 AT 11:24 PM)..." required>
+        <input type="text" class="border p-2 rounded w-3/4 msg-text" value="${text}" placeholder="Type text (Leave blank for AUTO TIME)" ${sender==="time"?"":"required"}>
         <button type="button" onclick="this.parentElement.remove()" class="bg-red-500 text-white px-3 py-2 rounded">X</button>`;
+        
+        // Dynamic Required Attribute to support Blank Auto-Time
+        div.querySelector('.msg-sender').addEventListener('change', function(e) {
+            if(e.target.value === 'time') {
+                div.querySelector('.msg-text').removeAttribute('required');
+            } else {
+                div.querySelector('.msg-text').setAttribute('required', 'true');
+            }
+        });
+
         container.appendChild(div);
     }
     fetch('/api/get_data').then(r=>r.json()).then(data => {
