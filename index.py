@@ -18,13 +18,13 @@ if MONGO_URI:
     except:
         pass
 
-# Default Data
+# Default Data (Updated with Date/Time gaps mapping your screenshot)
 fallback_data = {
     "pfp1": "https://i.pravatar.cc/150?img=11", 
     "pfp2": "https://i.pravatar.cc/150?img=5",  
     "name": "Reji Kabeer B",
     "messages": [
-        {"sender": "time", "text": ""}, # Empty text will trigger Auto-Time
+        {"sender": "time", "text": ""}, # ফাঁকা রাখলে অটো রিয়েল-টাইম ধরবে
         {"sender": "1", "text": "Hey 👋"},
         {"sender": "time", "text": ""},
         {"sender": "1", "text": "Hi"},
@@ -430,6 +430,21 @@ CHAT_HTML = """
         chat.scrollTop = chat.scrollHeight;
     }
 
+    // ================= NEW REAL TIME FUNCTION ================= #
+    function getMessengerTime() {
+        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        const now = new Date();
+        const month = months[now.getMonth()];
+        const date = now.getDate();
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${month} ${date} AT ${hours}:${minutes} ${ampm}`;
+    }
+
     function appendMessage(text, sender) {
         const div = document.createElement('div');
         
@@ -448,52 +463,26 @@ CHAT_HTML = """
         scrollToBottom();
     }
 
-    // ================= NEW AUTO TIME SYSTEM ================= //
-    function getMessengerTime(offsetMinutes = 0) {
-        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-        const now = new Date();
-        now.setMinutes(now.getMinutes() + offsetMinutes);
-        const month = months[now.getMonth()];
-        const date = now.getDate();
-        let hours = now.getHours();
-        const minutes = now.getMinutes() < 10 ? '0' + now.getMinutes() : now.getMinutes();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12;
-        return `${month} ${date} AT ${hours}:${minutes} ${ampm}`;
-    }
-
-    // MAIN AUTO START (UPDATED FOR AUTO TIME)
+    // MAIN AUTO START (UPDATED FOR AUTO REAL TIME)
     async function startAutoChat() {
         document.getElementById('overlay').style.display = 'none';
         await sleep(3000);
 
-        let msgCounter = 0;
-
-        // Auto inject real-time at the very top if it's not already a time block
-        if (chatData.messages.length > 0 && chatData.messages[0].sender !== "time") {
-            appendMessage(getMessengerTime(0), "time");
-        }
-
         for (let msg of chatData.messages) {
             if (msg.sender === "time") {
-                // Auto generate time if user left it blank or used default text
                 let timeText = msg.text.trim();
-                if (!timeText || timeText.toLowerCase() === "auto" || timeText.includes("SEP 3") || timeText.includes("Date")) {
-                    timeText = getMessengerTime(msgCounter * 2); // Time increases slightly
-                }
+                // বক্স খালি রাখলে আসল রিয়েল টাইম ধরবে
+                if (!timeText) timeText = getMessengerTime();
                 appendMessage(timeText, "time");
             } else if (msg.sender === "1") {
                 await simulateTypingKeyboard(msg.text); 
                 appendMessage(msg.text, "1");
-                msgCounter++;
             } else {
                 document.getElementById('typing-row').style.display = 'flex'; 
                 scrollToBottom();
                 await sleep(msg.text.length * 60 + 1000); 
                 document.getElementById('typing-row').style.display = 'none'; 
                 appendMessage(msg.text, "2");
-                msgCounter++;
             }
             document.getElementById('seen-pfp').style.display = 'none'; 
             await sleep(1000);
@@ -526,6 +515,15 @@ ADMIN_HTML = """
                 <div><label class="block font-bold mb-1">Target Profile Picture URL</label><input type="text" id="pfp2" class="w-full border p-2 rounded" required></div>
             </div>
             <div class="mb-4"><label class="block font-bold mb-1">Chat Header Name</label><input type="text" id="chatName" class="w-full border p-2 rounded" required></div>
+            
+            <!-- NEW HTML IMPORT SYSTEM -->
+            <div class="mb-4 bg-gray-50 p-4 rounded border border-gray-200">
+                <label class="block font-bold mb-1 text-blue-700">Import Messages from HTML</label>
+                <p class="text-xs text-gray-500 mb-2">গল্পের স্ক্রিপ্ট একবারে সেট করতে এখানে HTML পেস্ট করুন। আপনার মেসেজে class="me", তার মেসেজে class="he" বা "she", এবং সময়ের জন্য class="time" ব্যবহার করুন।</p>
+                <textarea id="htmlInput" class="w-full border p-2 rounded mb-2" rows="4" placeholder='<div class="me">Hello</div>&#10;<div class="he">Hi</div>'></textarea>
+                <button type="button" onclick="parseHTML()" class="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 font-bold">Import HTML</button>
+            </div>
+
             <div class="mb-4">
                 <h3 class="font-bold text-lg mb-2 border-b pb-1">Messages & Timestamps</h3>
                 <div id="messages-container"></div>
@@ -536,6 +534,7 @@ ADMIN_HTML = """
     </div>
 <script>
     let container = document.getElementById('messages-container');
+    
     function addMsgRow(sender="1", text="") {
         const div = document.createElement('div'); div.className = "flex gap-2 mb-2 items-center";
         
@@ -544,10 +543,10 @@ ADMIN_HTML = """
             <option value="2" ${sender==="2"?"selected":""}>Them</option>
             <option value="time" ${sender==="time"?"selected":""}>Time (Date/Time)</option>
         </select>
-        <input type="text" class="border p-2 rounded w-3/4 msg-text" value="${text}" placeholder="Type text (Leave blank for AUTO TIME)" ${sender==="time"?"":"required"}>
+        <input type="text" class="border p-2 rounded w-3/4 msg-text" value="${text}" placeholder="Type text or leave blank for Auto Real Time..." ${sender==="time"?"":"required"}>
         <button type="button" onclick="this.parentElement.remove()" class="bg-red-500 text-white px-3 py-2 rounded">X</button>`;
         
-        // Dynamic Required Attribute to support Blank Auto-Time
+        // Time সিলেক্ট করলে ইনপুট Required থাকবে না, যাতে ফাঁকা রাখলে অটো রিয়েল-টাইম নিতে পারে
         div.querySelector('.msg-sender').addEventListener('change', function(e) {
             if(e.target.value === 'time') {
                 div.querySelector('.msg-text').removeAttribute('required');
@@ -558,10 +557,39 @@ ADMIN_HTML = """
 
         container.appendChild(div);
     }
+
+    // HTML Parse Function
+    function parseHTML() {
+        const val = document.getElementById('htmlInput').value;
+        if(!val.trim()) return alert("দয়া করে আগে বক্সে HTML পেস্ট করুন!");
+        
+        const temp = document.createElement('div');
+        temp.innerHTML = val;
+        
+        Array.from(temp.children).forEach(el => {
+            const c = (el.className || '').toLowerCase();
+            const txt = (el.innerText || el.textContent).trim();
+            
+            if(c.includes('me')) {
+                addMsgRow('1', txt);
+            } else if(c.includes('he') || c.includes('she') || c.includes('them')) {
+                addMsgRow('2', txt);
+            } else if(c.includes('time')) {
+                addMsgRow('time', txt);
+            }
+        });
+        
+        // Import এর পর বক্স ক্লিয়ার করা হচ্ছে
+        document.getElementById('htmlInput').value = '';
+    }
+
     fetch('/api/get_data').then(r=>r.json()).then(data => {
-        document.getElementById('pfp1').value = data.pfp1 || ""; document.getElementById('pfp2').value = data.pfp2 || ""; document.getElementById('chatName').value = data.name || "Unknown";
+        document.getElementById('pfp1').value = data.pfp1 || ""; 
+        document.getElementById('pfp2').value = data.pfp2 || ""; 
+        document.getElementById('chatName').value = data.name || "Unknown";
         if(data.messages) data.messages.forEach(m => addMsgRow(m.sender, m.text)); else addMsgRow();
     });
+    
     document.getElementById('chatForm').onsubmit = function(e) {
         e.preventDefault(); let msgs = [];
         document.querySelectorAll('#messages-container > div').forEach(row => { msgs.push({sender: row.querySelector('.msg-sender').value, text: row.querySelector('.msg-text').value}); });
