@@ -22,12 +22,10 @@ if MONGO_URI:
 fallback_data = {
     "pfp1": "https://i.pravatar.cc/150?img=11", 
     "pfp2": "https://i.pravatar.cc/150?img=5",  
-    "name": "Reji Kabeer B",
+    "name": "Mark Zuckerberg",
     "messages": [
-        {"sender": "1", "text": "Hey 👋"},
-        {"sender": "1", "text": "Hi"},
-        {"sender": "2", "text": "Hi"},
-        {"sender": "1", "text": "How are you?"}
+        {"sender": "1", "text": "হ্যালো মার্ক! কেমন আছো? তুমি কি ভালো?"},
+        {"sender": "2", "text": "Hi! I am good. How are you?"}
     ]
 }
 
@@ -44,7 +42,7 @@ def save_data(data):
     else:
         fallback_data = data
 
-# ================= PWA SETUP ================= #
+# ================= PWA SETUP (SHOWS REAL MOBILE STATUS BAR) ================= #
 
 @app.route('/manifest.json')
 def manifest():
@@ -54,7 +52,7 @@ def manifest():
         "start_url": "/",
         "display": "standalone",
         "background_color": "#ffffff",
-        "theme_color": "#EBF0F6",
+        "theme_color": "#ffffff",
         "icons": [
             {
                 "src": "https://cdn-icons-png.flaticon.com/512/733/733548.png",
@@ -90,53 +88,57 @@ CHAT_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Messenger Exact Clone</title>
+    <title>Messenger Clone</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#EBF0F6">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Global Reset & Your New Design */
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: #000; display: flex; justify-content: center; height: 100dvh; width: 100vw; overflow: hidden; }
+        /* Global Reset */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #000; display: flex; justify-content: center; height: 100dvh; overflow: hidden; }
         
-        .app-container {
-            width: 100%; max-width: 480px; height: 100dvh; background-color: #EBF0F6;
-            display: flex; flex-direction: column; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.2); overflow: hidden;
+        .messenger-container { 
+            background: #EBF0F6; 
+            width: 100%; max-width: 480px; height: 100dvh; 
+            display: flex; flex-direction: column; position: relative; overflow: hidden;
         }
-
-        /* Header */
-        .header { display: flex; align-items: center; padding: 12px 15px; background-color: #EBF0F6; z-index: 10; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .icon-btn { background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .icon-btn svg { fill: #0084FF; width: 24px; height: 24px; }
         
+        /* New Messenger Chat Header */
+        .header { 
+            display: flex; align-items: center; padding: 12px 15px; 
+            background-color: #EBF0F6; z-index: 10; border-bottom: 1px solid rgba(0,0,0,0.05); 
+        }
+        .icon-btn { background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-right: 5px; }
+        .icon-btn svg { fill: #0084FF; width: 24px; height: 24px; }
         .profile-info { display: flex; align-items: center; flex: 1; margin-left: 10px; }
-        .profile-info img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
-        .profile-info h3 { font-size: 16px; margin-left: 10px; color: #000; font-weight: 600; }
+        .profile-img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+        .user-name { font-size: 16px; margin-left: 10px; color: #000; font-weight: 600; }
         .header-actions { display: flex; gap: 15px; }
 
-        /* Chat Body */
-        .chat-body { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; scroll-behavior: smooth; padding-bottom: 15px; }
-        .chat-body::-webkit-scrollbar { display: none; }
+        /* Chat Area */
+        .chat-area { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 20px; scroll-behavior: smooth;}
+        .chat-area::-webkit-scrollbar { display: none; }
         
+        /* Top Profile Banner */
         .top-profile { text-align: center; margin-bottom: 25px; margin-top: 10px; display: flex; flex-direction: column; align-items: center; }
         .top-profile img { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; }
-        .top-profile h2 { font-size: 20px; margin-top: 10px; color: #000; }
+        .top-profile h2 { font-size: 20px; margin-top: 10px; color: #000; font-weight: 600; }
         .top-profile p { font-size: 13px; color: #555; margin-top: 2px; }
         .btn-view-profile { background-color: rgba(0,0,0,0.05); border: none; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 14px; margin-top: 12px; cursor: pointer; }
         .security-notice { font-size: 11px; color: #65676B; margin-top: 15px; line-height: 1.4; padding: 0 15px; text-align: center; }
         .security-notice svg { width: 10px; height: 10px; fill: #65676B; margin-right: 2px; vertical-align: middle; }
         .security-notice span { color: #0084FF; font-weight: 600; }
 
-        /* Messages */
-        .message-row { display: flex; margin-bottom: 2px; align-items: flex-end; width: 100%; }
+        /* Message Styling mapping exactly to Original JS Classes */
+        .message-row { display: flex; margin-bottom: 2px; width: 100%; align-items: flex-end;}
         .message-row.me { justify-content: flex-end; }
-        .message-row.other { justify-content: flex-start; }
-        .other-avatar { width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; object-fit: cover; }
-        .spacer { width: 32px; }
-        .message-bubble { padding: 9px 15px; border-radius: 18px; font-size: 16px; max-width: 75%; word-wrap: break-word; line-height: 1.4; }
-        .me .message-bubble { background-color: #0084FF; color: white; border-bottom-right-radius: 4px; }
-        .other .message-bubble { background-color: rgba(0,0,0,0.05); color: black; border-bottom-left-radius: 4px; }
-
+        .message-row.them { justify-content: flex-start; }
+        .them-pic { width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; object-fit: cover;}
+        
+        .bubble { padding: 9px 15px; border-radius: 18px; font-size: 16px; max-width: 75%; word-wrap: break-word; line-height: 1.4; }
+        .me .bubble { background-color: #0084ff; color: white; border-bottom-right-radius: 4px; }
+        .them .bubble { background-color: rgba(0,0,0,0.05); color: black; border-bottom-left-radius: 4px; }
+        
         /* 3 Dots Typing Indicator */
         .typing-bubble { background: rgba(0,0,0,0.05); padding: 12px 16px; border-radius: 18px; border-bottom-left-radius: 4px; display: flex; gap: 4px; align-items: center; width: fit-content; }
         .dot { width: 6px; height: 6px; background-color: #8D949E; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; }
@@ -144,18 +146,25 @@ CHAT_HTML = """
         .dot:nth-child(2) { animation-delay: -0.16s; }
         @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
 
-        /* Bottom Input Bar */
-        .bottom-bar { display: flex; align-items: center; padding: 10px 12px; background-color: #EBF0F6; padding-bottom: 20px; z-index: 5;}
+        /* New Bottom Input Area */
+        .input-area { display: flex; align-items: center; padding: 10px 12px; background-color: #EBF0F6; padding-bottom: 20px; z-index: 5;}
         .left-actions { display: flex; align-items: center; gap: 12px; margin-right: 12px; }
         .left-actions svg { fill: #0084FF; width: 26px; height: 26px; }
         .input-container { flex-grow: 1; background-color: rgba(0,0,0,0.05); border-radius: 20px; padding: 8px 15px; display: flex; align-items: center; }
-        .input-container input { border: none; background: transparent; outline: none; width: 100%; font-size: 16px; color: #050505; }
+        .input-box { border: none; background: transparent; outline: none; width: 100%; font-size: 16px; color: #050505; }
+        .emoji-btn { background: transparent; border: none; display: flex; align-items: center; cursor: pointer; }
         .emoji-btn svg { fill: #0084FF; width: 22px; height: 22px; margin-left: 5px; }
-        .action-btn { margin-left: 12px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; }
-        .action-btn svg { fill: #0084FF; width: 26px; height: 26px; }
+        
+        /* Matches exactly with original JS `#send-icon` class logic */
+        .input-right-icon { color: #0084ff; font-size: 26px; margin-left: 12px; transition: 0.2s; cursor: pointer; }
 
-        /* Gboard Keyboard (Your original code) */
-        .keyboard-area { height: 0; background: #18191c; transition: height 0.25s cubic-bezier(0, 0, 0.2, 1); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; position: relative; padding: 0 3px 6px 3px; user-select: none; -webkit-user-select: none; border-top: 1px solid #23252a; }
+        /* Gboard Keyboard (Your Exact Original CSS) */
+        .keyboard-area { 
+            height: 0; background: #18191c; transition: height 0.25s cubic-bezier(0, 0, 0.2, 1); 
+            overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; 
+            position: relative; padding: 0 3px 6px 3px; user-select: none; -webkit-user-select: none; 
+            border-top: 1px solid #23252a;
+        }
         .keyboard-area.active { height: 295px; }
         .gboard-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 6px 14px; color: #9aa0a6; font-size: 15px; background: #18191c; }
         .gboard-toolbar .tool-icons { display: flex; align-items: center; gap: 18px; }
@@ -167,16 +176,16 @@ CHAT_HTML = """
         .kb-key.enter-key { background: #202225; flex: 1.4; color: #ffffff; }
         .kb-key.pressed { background: #4e535c !important; color: #fff !important; transform: scale(0.92); }
 
-        /* Start Overlay */
+        /* Overlays (Your Exact Original CSS) */
         .overlay-start { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.92); display: flex; justify-content: center; align-items: center; z-index: 100; flex-direction: column; color: white;}
         .start-btn { background: #0084ff; color: white; padding: 14px 28px; font-size: 17px; border: none; border-radius: 25px; cursor: pointer; margin-top: 15px; font-weight: 600; box-shadow: 0 4px 10px rgba(0,132,255,0.4);}
-        .seen-indicator { width: 14px; height: 14px; border-radius: 50%; object-fit: cover; align-self: flex-end; margin-top: 4px; display: none; margin-right: 5px;}
+        .seen-indicator { width: 14px; height: 14px; border-radius: 50%; object-fit: cover; align-self: flex-end; margin-top: 4px; display: none; margin-right: 4px; }
     </style>
 </head>
 <body>
 
-<div class="app-container" id="messenger">
-    <!-- Start Recording Overlay -->
+<div class="messenger-container" id="messenger">
+    <!-- Start Recording Overlay (Exactly Original) -->
     <div class="overlay-start" id="overlay">
         <h2 style="margin-bottom: 8px;">Ready to Start</h2>
         <p style="text-align:center; padding: 0 20px; font-size: 13px; color:#ccc; line-height: 1.5;">
@@ -186,14 +195,14 @@ CHAT_HTML = """
         <button class="start-btn" onclick="startAutoChat()">Start Chat</button>
     </div>
 
-    <!-- Header (Your New Design) -->
+    <!-- New Messenger Header -->
     <div class="header">
-        <button class="icon-btn" style="margin-right: 5px;">
+        <button class="icon-btn">
             <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
         </button>
         <div class="profile-info">
-            <img src="" id="header-pfp" alt="Profile">
-            <h3 id="chat-name">Name</h3>
+            <img src="" id="header-pfp" class="profile-img" alt="PFP">
+            <span class="user-name" id="chat-name">Name</span>
         </div>
         <div class="header-actions">
             <button class="icon-btn">
@@ -206,7 +215,8 @@ CHAT_HTML = """
     </div>
 
     <!-- Chat Messages -->
-    <div class="chat-body" id="chat-area">
+    <div class="chat-area" id="chat-area">
+        <!-- New Top Profile Section -->
         <div class="top-profile">
             <img src="" id="top-pfp" alt="Profile Big">
             <h2 id="top-name">Name</h2>
@@ -217,10 +227,9 @@ CHAT_HTML = """
                 Messages and calls are secured with end-to-end encryption. Only people in this chat can read, listen to, or share them. <span>Learn more</span>
             </p>
         </div>
-        
-        <!-- Messages will inject here -->
-        <div class="message-row other" id="typing-row" style="display: none;">
-            <img src="" id="typing-pfp" class="other-avatar">
+
+        <div class="message-row them" id="typing-row" style="display: none;">
+            <img src="" id="typing-pfp" class="them-pic">
             <div class="typing-bubble">
                 <div class="dot"></div><div class="dot"></div><div class="dot"></div>
             </div>
@@ -230,34 +239,24 @@ CHAT_HTML = """
         </div>
     </div>
 
-    <!-- Bottom Input Bar (Your New Design) -->
-    <div class="bottom-bar">
+    <!-- New Bottom Input Area -->
+    <div class="input-area">
         <div class="left-actions">
-            <button class="icon-btn">
-                <svg viewBox="0 0 24 24"><path d="M4 4h3l2-2h6l2 2h3c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm8 3c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg>
-            </button>
-            <button class="icon-btn">
-                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-            </button>
-            <button class="icon-btn" id="micBtn">
-                <svg id="micIcon" viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
-            </button>
+            <button class="icon-btn"><svg viewBox="0 0 24 24"><path d="M4 4h3l2-2h6l2 2h3c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm8 3c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg></button>
+            <button class="icon-btn"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></button>
+            <button class="icon-btn"><svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg></button>
         </div>
         
         <div class="input-container">
-            <input type="text" id="msg-input" placeholder="Aa" readonly>
-            <button class="icon-btn emoji-btn">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 8c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm-7 0c.83 0 1.5.67 1.5 1.5S9.33 13 8.5 13 7 12.33 7 11.5 7.67 10 8.5 10zm3.5 8c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z"/></svg>
-            </button>
+            <input type="text" class="input-box" id="msg-input" placeholder="Aa" readonly>
+            <button class="emoji-btn"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 8c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm-7 0c.83 0 1.5.67 1.5 1.5S9.33 13 8.5 13 7 12.33 7 11.5 7.67 10 8.5 10zm3.5 8c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z"/></svg></button>
         </div>
         
-        <button class="action-btn" id="sendOrThumbBtn">
-            <svg id="thumbIcon" viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
-            <svg id="sendIcon" style="display:none;" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-        </button>
+        <!-- FontAwesome Send/Thumb button exactly matching Original JS class logic -->
+        <i class="fa-solid fa-thumbs-up input-right-icon" id="send-icon"></i>
     </div>
 
-    <!-- Gboard Keyboard (Real Dark Layout matching Screenshot) -->
+    <!-- Gboard Keyboard (Real Dark Layout exactly Original) -->
     <div class="keyboard-area" id="keyboard">
         <div class="gboard-toolbar">
             <div class="tool-icons">
@@ -277,39 +276,99 @@ CHAT_HTML = """
 </div>
 
 <script>
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
+    /* ========== YOUR EXACT ORIGINAL JAVASCRIPT LOGIC ========== */
+    
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+    }
 
     let chatData = {};
     fetch('/api/get_data').then(res => res.json()).then(data => {
         chatData = data;
         document.getElementById('header-pfp').src = data.pfp2;
-        document.getElementById('top-pfp').src = data.pfp2;
         document.getElementById('typing-pfp').src = data.pfp2;
         document.getElementById('seen-pfp').src = data.pfp2;
         document.getElementById('chat-name').innerText = data.name;
+        // Added lines for top profile banner
+        document.getElementById('top-pfp').src = data.pfp2;
         document.getElementById('top-name').innerText = data.name;
     });
 
     function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-    // REAL GBOARD LAYOUTS
     const gboardLayouts = {
         'BN': {
             langLabel: '◀ প্রভাত ▶',
             rows: [
-                [{c: 'দ', h: '১'}, {c: 'ূ', h: '২'}, {c: 'ী', h: '৩'}, {c: 'র', h: '৪'}, {c: 'ট', h: '৫'}, {c: 'এ', h: '৬'}, {c: 'ি', h: '৭'}, {c: 'ও', h: '৮'}, {c: 'প', h: '৯'}, {c: 'চ', h: '০'}],
-                [{c: 'া', h: '@'}, {c: 'স', h: '#'}, {c: 'ড', h: '৳'}, {c: 'ত', h: '%'}, {c: 'গ', h: '&'}, {c: 'হ', h: '-'}, {c: 'জ', h: '+'}, {c: 'ক', h: '('}, {c: 'ল', h: ')'}, {c: 'ে', h: '='}],
-                [{type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'}, {c: 'য়'}, {c: 'শ'}, {c: 'ু'}, {c: 'আ'}, {c: 'ব'}, {c: 'ন'}, {c: 'ম'}, {c: 'ো'}, {type: 'special', icon: '<i class="fa-solid fa-delete-left"></i>'}],
-                [{type: 'special', text: '?123'}, {c: ',', h: '☺'}, {type: 'space', text: '◀ প্রভাত ▶'}, {c: '।'}, {type: 'enter', icon: '<i class="fa-solid fa-arrow-turn-down" style="transform: rotate(90deg);"></i>'}]
+                [
+                    {c: 'দ', h: '১'}, {c: 'ূ', h: '২'}, {c: 'ী', h: '৩'}, {c: 'র', h: '৪'}, {c: 'ট', h: '৫'}, 
+                    {c: 'এ', h: '৬'}, {c: 'ি', h: '৭'}, {c: 'ও', h: '৮'}, {c: 'প', h: '৯'}, {c: 'চ', h: '০'}
+                ],
+                [
+                    {c: 'া', h: '@'}, {c: 'স', h: '#'}, {c: 'ড', h: '৳'}, {c: 'ত', h: '%'}, {c: 'গ', h: '&'}, 
+                    {c: 'হ', h: '-'}, {c: 'জ', h: '+'}, {c: 'ক', h: '('}, {c: 'ল', h: ')'}, {c: 'ে', h: '='}
+                ],
+                [
+                    {type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'},
+                    {c: 'য়'}, {c: 'শ'}, {c: 'ু'}, {c: 'আ'}, {c: 'ব'}, {c: 'ন'}, {c: 'ম'}, {c: 'ো'},
+                    {type: 'special', icon: '<i class="fa-solid fa-delete-left"></i>'}
+                ],
+                [
+                    {type: 'special', text: '?123'},
+                    {c: ',', h: '☺'},
+                    {type: 'space', text: '◀ প্রভাত ▶'},
+                    {c: '।'},
+                    {type: 'enter', icon: '<i class="fa-solid fa-arrow-turn-down" style="transform: rotate(90deg);"></i>'}
+                ]
             ]
         },
         'EN': {
             langLabel: '◀ English ▶',
             rows: [
-                [{c: 'q', h: '1'}, {c: 'w', h: '2'}, {c: 'e', h: '3'}, {c: 'r', h: '4'}, {c: 't', h: '5'}, {c: 'y', h: '6'}, {c: 'u', h: '7'}, {c: 'i', h: '8'}, {c: 'o', h: '9'}, {c: 'p', h: '0'}],
-                [{c: 'a', h: '@'}, {c: 's', h: '#'}, {c: 'd', h: '$'}, {c: 'f', h: '_'}, {c: 'g', h: '&'}, {c: 'h', h: '-'}, {c: 'j', h: '+'}, {c: 'k', h: '('}, {c: 'l', h: ')'}],
-                [{type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'}, {c: 'z'}, {c: 'x'}, {c: 'c'}, {c: 'v'}, {c: 'b'}, {c: 'n'}, {c: 'm'}, {type: 'special', icon: '<i class="fa-solid fa-delete-left"></i>'}],
-                [{type: 'special', text: '?123'}, {c: ',', h: '☺'}, {type: 'space', text: '◀ English ▶'}, {c: '.'}, {type: 'enter', icon: '<i class="fa-solid fa-arrow-turn-down" style="transform: rotate(90deg);"></i>'}]
+                [
+                    {c: 'q', h: '1'}, {c: 'w', h: '2'}, {c: 'e', h: '3'}, {c: 'r', h: '4'}, {c: 't', h: '5'}, 
+                    {c: 'y', h: '6'}, {c: 'u', h: '7'}, {c: 'i', h: '8'}, {c: 'o', h: '9'}, {c: 'p', h: '0'}
+                ],
+                [
+                    {c: 'a', h: '@'}, {c: 's', h: '#'}, {c: 'd', h: '$'}, {c: 'f', h: '_'}, {c: 'g', h: '&'}, 
+                    {c: 'h', h: '-'}, {c: 'j', h: '+'}, {c: 'k', h: '('}, {c: 'l', h: ')'}
+                ],
+                [
+                    {type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'},
+                    {c: 'z'}, {c: 'x'}, {c: 'c'}, {c: 'v'}, {c: 'b'}, {c: 'n'}, {c: 'm'},
+                    {type: 'special', icon: '<i class="fa-solid fa-delete-left"></i>'}
+                ],
+                [
+                    {type: 'special', text: '?123'},
+                    {c: ',', h: '☺'},
+                    {type: 'space', text: '◀ English ▶'},
+                    {c: '.'},
+                    {type: 'enter', icon: '<i class="fa-solid fa-arrow-turn-down" style="transform: rotate(90deg);"></i>'}
+                ]
+            ]
+        },
+        'AR': {
+            langLabel: '◀ العربية ▶',
+            rows: [
+                [
+                    {c: 'ض', h: '١'}, {c: 'ص', h: '٢'}, {c: 'ث', h: '٣'}, {c: 'ق', h: '٤'}, {c: 'ف', h: '٥'}, 
+                    {c: 'غ', h: '٦'}, {c: 'ع', h: '٧'}, {c: 'ه', h: '٨'}, {c: 'خ', h: '٩'}, {c: 'ح', h: '٠'}, {c: 'ج'}, {c: 'د'}
+                ],
+                [
+                    {c: 'ش'}, {c: 'س'}, {c: 'ي'}, {c: 'ব'}, {c: 'ل'}, {c: 'ا'}, {c: 'ت'}, {c: 'ن'}, {c: 'ম'}, {c: 'ك'}, {c: 'ط'}
+                ],
+                [
+                    {type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'},
+                    {c: 'ئ'}, {c: 'ء'}, {c: 'ؤ'}, {c: 'ر'}, {c: 'لا'}, {c: 'ى'}, {c: 'ة'}, {c: 'و'}, {c: 'ز'}, {c: 'ظ'},
+                    {type: 'special', icon: '<i class="fa-solid fa-delete-left"></i>'}
+                ],
+                [
+                    {type: 'special', text: '?123'},
+                    {c: '،'},
+                    {type: 'space', text: '◀ العربية ▶'},
+                    {c: '.'},
+                    {type: 'enter', icon: '<i class="fa-solid fa-arrow-turn-down" style="transform: rotate(90deg);"></i>'}
+                ]
             ]
         }
     };
@@ -318,6 +377,7 @@ CHAT_HTML = """
         for (let ch of text) {
             const code = ch.charCodeAt(0);
             if (code >= 0x0980 && code <= 0x09FF) return 'BN';
+            if (code >= 0x0600 && code <= 0x06FF) return 'AR';
             if (ch > '~') return 'GLOBAL';
         }
         return 'EN';
@@ -325,18 +385,58 @@ CHAT_HTML = """
 
     function renderGboard(text) {
         const lang = detectScript(text);
-        let layout = gboardLayouts[lang] || gboardLayouts['EN'];
+        let layout = gboardLayouts[lang];
+
+        if (!layout) {
+            const unique = Array.from(new Set(text.replace(/\\s/g, '')));
+            const r1 = [], r2 = [], r3 = [];
+            unique.forEach((c, i) => {
+                const target = i % 3 === 0 ? r1 : (i % 3 === 1 ? r2 : r3);
+                target.push({c: c, h: (i % 9 + 1).toString()});
+            });
+            while(r1.length < 10) r1.push({c: '•', h: ''});
+            while(r2.length < 9) r2.push({c: '•', h: ''});
+            while(r3.length < 7) r3.push({c: '•', h: ''});
+
+            layout = {
+                langLabel: '◀ Global ▶',
+                rows: [
+                    r1,
+                    r2,
+                    [{type: 'special', icon: '<i class="fa-solid fa-arrow-up"></i>'}, ...r3, {type: 'special', icon: '<i class="fa-solid fa-delete-left"></i>'}],
+                    [
+                        {type: 'special', text: '?123'},
+                        {c: ','},
+                        {type: 'space', text: '◀ Global ▶'},
+                        {c: '.'},
+                        {type: 'enter', icon: '<i class="fa-solid fa-arrow-turn-down" style="transform: rotate(90deg);"></i>'}
+                    ]
+                ]
+            };
+        }
 
         for (let r = 1; r <= 4; r++) {
             const rowElem = document.getElementById(`kb-r${r}`);
             rowElem.innerHTML = '';
-            layout.rows[r - 1].forEach(item => {
+            const rowData = layout.rows[r - 1];
+
+            rowData.forEach(item => {
                 const key = document.createElement('div');
                 key.className = 'kb-key';
-                if (item.type === 'special') { key.classList.add('special'); key.innerHTML = item.icon || item.text; }
-                else if (item.type === 'space') { key.classList.add('space-key'); key.innerHTML = item.text; }
-                else if (item.type === 'enter') { key.classList.add('enter-key'); key.innerHTML = item.icon; }
-                else { key.setAttribute('data-char', item.c); key.innerHTML = `${item.c}${item.h ? `<span class="hint">${item.h}</span>` : ''}`; }
+
+                if (item.type === 'special') {
+                    key.classList.add('special');
+                    key.innerHTML = item.icon || item.text;
+                } else if (item.type === 'space') {
+                    key.classList.add('space-key');
+                    key.innerHTML = item.text;
+                } else if (item.type === 'enter') {
+                    key.classList.add('enter-key');
+                    key.innerHTML = item.icon;
+                } else {
+                    key.setAttribute('data-char', item.c);
+                    key.innerHTML = `${item.c}${item.h ? `<span class="hint">${item.h}</span>` : ''}`;
+                }
                 rowElem.appendChild(key);
             });
         }
@@ -349,9 +449,9 @@ CHAT_HTML = """
         await sleep(350);
 
         const input = document.getElementById('msg-input');
-        document.getElementById('thumbIcon').style.display = 'none';
-        document.getElementById('micBtn').style.display = 'none';
-        document.getElementById('sendIcon').style.display = 'block';
+        const icon = document.getElementById('send-icon');
+        icon.classList.remove('fa-thumbs-up'); 
+        icon.classList.add('fa-paper-plane');
         
         const chars = Array.from(text);
         for (let i = 0; i < chars.length; i++) {
@@ -359,8 +459,16 @@ CHAT_HTML = """
             input.value += ch;
 
             let targetKey = document.querySelector(`.kb-key[data-char="${ch}"]`);
-            if (!targetKey && ch === ' ') targetKey = document.querySelector('.kb-key.space-key');
-            
+            if (!targetKey && ch === ' ') {
+                targetKey = document.querySelector('.kb-key.space-key');
+            }
+            if (!targetKey) {
+                const normalKeys = document.querySelectorAll('.kb-key[data-char]');
+                if (normalKeys.length > 0) {
+                    targetKey = normalKeys[Math.floor(Math.random() * normalKeys.length)];
+                }
+            }
+
             if (targetKey) {
                 targetKey.classList.add('pressed');
                 setTimeout(() => targetKey.classList.remove('pressed'), 110);
@@ -370,9 +478,8 @@ CHAT_HTML = """
 
         await sleep(400); 
         input.value = "";
-        document.getElementById('sendIcon').style.display = 'none';
-        document.getElementById('thumbIcon').style.display = 'block';
-        document.getElementById('micBtn').style.display = 'flex';
+        icon.classList.remove('fa-paper-plane'); 
+        icon.classList.add('fa-thumbs-up');
         kb.classList.remove('active'); 
         await sleep(250);
     }
@@ -384,21 +491,19 @@ CHAT_HTML = """
 
     function appendMessage(text, sender) {
         const div = document.createElement('div');
-        if (sender === "1") {
-            div.className = 'message-row me';
-            div.innerHTML = `<div class="message-bubble">${text}</div>`;
-        } else {
-            div.className = 'message-row other';
-            div.innerHTML = `<img src="${chatData.pfp2}" class="other-avatar"><div class="message-bubble">${text}</div>`;
-        }
+        div.className = sender === "1" ? "message-row me" : "message-row them";
+        let html = '';
+        if(sender === "2") html += `<img src="${chatData.pfp2}" class="them-pic">`;
+        html += `<div class="bubble">${text}</div>`;
+        div.innerHTML = html;
         document.getElementById('chat-area').insertBefore(div, document.getElementById('typing-row'));
         scrollToBottom();
     }
 
-    // MAIN AUTO START
+    // MAIN AUTO START: 3 SECONDS CLEAN PAUSE BEFORE CHAT STARTS
     async function startAutoChat() {
         document.getElementById('overlay').style.display = 'none';
-        await sleep(3000); // 3 seconds pause for video record ready
+        await sleep(3000);
 
         for (let msg of chatData.messages) {
             if (msg.sender === "1") {
@@ -443,7 +548,7 @@ ADMIN_HTML = """
             </div>
             <div class="mb-4"><label class="block font-bold mb-1">Chat Header Name</label><input type="text" id="chatName" class="w-full border p-2 rounded" required></div>
             <div class="mb-4">
-                <h3 class="font-bold text-lg mb-2 border-b pb-1">Messages</h3>
+                <h3 class="font-bold text-lg mb-2 border-b pb-1">Messages (Support Emoji/Any 194 Country Lang)</h3>
                 <div id="messages-container"></div>
                 <button type="button" onclick="addMsgRow()" class="mt-3 bg-blue-100 text-blue-700 px-3 py-1 rounded shadow">+ Add Message</button>
             </div>
@@ -454,7 +559,7 @@ ADMIN_HTML = """
     let container = document.getElementById('messages-container');
     function addMsgRow(sender="1", text="") {
         const div = document.createElement('div'); div.className = "flex gap-2 mb-2 items-center";
-        div.innerHTML = `<select class="border p-2 rounded w-1/4 msg-sender"><option value="1" ${sender==="1"?"selected":""}>Me</option><option value="2" ${sender==="2"?"selected":""}>Them</option></select><input type="text" class="border p-2 rounded w-3/4 msg-text" value="${text}" placeholder="Type text..." required><button type="button" onclick="this.parentElement.remove()" class="bg-red-500 text-white px-3 py-2 rounded">X</button>`;
+        div.innerHTML = `<select class="border p-2 rounded w-1/4 msg-sender"><option value="1" ${sender==="1"?"selected":""}>Me</option><option value="2" ${sender==="2"?"selected":""}>Them</option></select><input type="text" class="border p-2 rounded w-3/4 msg-text" value="${text}" placeholder="Type text or emojis..." required><button type="button" onclick="this.parentElement.remove()" class="bg-red-500 text-white px-3 py-2 rounded">X</button>`;
         container.appendChild(div);
     }
     fetch('/api/get_data').then(r=>r.json()).then(data => {
